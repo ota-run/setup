@@ -83,6 +83,7 @@ annotations, comments, or receipt artifacts.
 - `install: always` forces installer use before selecting the binary
 - `install: never` requires ota to already exist and fails closed otherwise
 - setting `ota-version` with `install: auto` promotes the run to installer mode so the requested version is honored
+- the supported target is GitHub Actions runners; self-hosted runners should provide `pwsh` on Windows or `sh` plus `curl` on Unix-like runners when installer mode is used
 
 ## Release model
 

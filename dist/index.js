@@ -27917,10 +27917,6 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util");
 /************************************************************************/
 var __webpack_exports__ = {};
 
-;// CONCATENATED MODULE: external "node:fs/promises"
-const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: external "node:child_process"
@@ -30870,6 +30866,10 @@ function getIDToken(aud) {
  */
 
 //# sourceMappingURL=core.js.map
+;// CONCATENATED MODULE: external "node:fs/promises"
+const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: ./src/lib.js
 //                █████
 //               ░░███
@@ -30892,6 +30892,8 @@ function getIDToken(aud) {
 //   and limitations under the License.
 //
 //   If you need additional information or have any questions, please email: os@ota.run
+
+
 
 
 
@@ -30943,6 +30945,24 @@ function isPathLike(bin) {
   return bin.includes("/") || bin.includes("\\") || external_node_path_namespaceObject.isAbsolute(bin);
 }
 
+async function existingRunnableFile(candidate, platform = process.platform) {
+  try {
+    const stat = await promises_namespaceObject.stat(candidate);
+    if (!stat.isFile()) {
+      return false;
+    }
+
+    const accessMode = platform === "win32"
+      ? external_node_fs_namespaceObject.constants.F_OK
+      : external_node_fs_namespaceObject.constants.X_OK;
+
+    await promises_namespaceObject.access(candidate, accessMode);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function parseInstalledVersion(stdout) {
   const match = String(stdout ?? "").match(/v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/);
   if (!match) {
@@ -30990,8 +31010,6 @@ function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModul
 //   and limitations under the License.
 //
 //   If you need additional information or have any questions, please email: os@ota.run
-
-
 
 
 
@@ -31052,11 +31070,8 @@ function executableCandidates(bin, env = process.env, platform = process.platfor
 
 async function resolveExistingBinary(bin, env = process.env, platform = process.platform) {
   for (const candidate of executableCandidates(bin, env, platform)) {
-    try {
-      await promises_namespaceObject.access(candidate, external_node_fs_namespaceObject.constants.F_OK);
+    if (await existingRunnableFile(candidate, platform)) {
       return candidate;
-    } catch {
-      continue;
     }
   }
   return null;
@@ -31146,13 +31161,10 @@ async function ensureOtaBinary(inputs, cwd) {
 
   for (const directory of otaInstallDirectories()) {
     const candidate = external_node_path_namespaceObject.join(directory, binaryName);
-    try {
-      await promises_namespaceObject.access(candidate, external_node_fs_namespaceObject.constants.F_OK);
+    if (await existingRunnableFile(candidate)) {
       exposeBinaryDirectory(candidate, addPath);
       info(`Using ota binary at ${candidate}`);
       return { binaryPath: candidate, installed: true };
-    } catch {
-      continue;
     }
   }
 

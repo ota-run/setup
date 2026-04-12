@@ -20,14 +20,13 @@
 //
 //   If you need additional information or have any questions, please email: os@ota.run
 
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
 import * as core from "@actions/core";
 
 import {
+  existingRunnableFile,
   exposeBinaryDirectory,
   isPathLike,
   normalizeOtaVersion,
@@ -90,11 +89,8 @@ function executableCandidates(bin, env = process.env, platform = process.platfor
 
 async function resolveExistingBinary(bin, env = process.env, platform = process.platform) {
   for (const candidate of executableCandidates(bin, env, platform)) {
-    try {
-      await fs.access(candidate, fsSync.constants.F_OK);
+    if (await existingRunnableFile(candidate, platform)) {
       return candidate;
-    } catch {
-      continue;
     }
   }
   return null;
@@ -184,13 +180,10 @@ async function ensureOtaBinary(inputs, cwd) {
 
   for (const directory of otaInstallDirectories()) {
     const candidate = path.join(directory, binaryName);
-    try {
-      await fs.access(candidate, fsSync.constants.F_OK);
+    if (await existingRunnableFile(candidate)) {
       exposeBinaryDirectory(candidate, core.addPath);
       core.info(`Using ota binary at ${candidate}`);
       return { binaryPath: candidate, installed: true };
-    } catch {
-      continue;
     }
   }
 

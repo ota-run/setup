@@ -20,6 +20,8 @@
 //
 //   If you need additional information or have any questions, please email: os@ota.run
 
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 
 function parseInstallMode(value) {
@@ -70,6 +72,24 @@ function isPathLike(bin) {
   return bin.includes("/") || bin.includes("\\") || path.isAbsolute(bin);
 }
 
+async function existingRunnableFile(candidate, platform = process.platform) {
+  try {
+    const stat = await fs.stat(candidate);
+    if (!stat.isFile()) {
+      return false;
+    }
+
+    const accessMode = platform === "win32"
+      ? fsSync.constants.F_OK
+      : fsSync.constants.X_OK;
+
+    await fs.access(candidate, accessMode);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function parseInstalledVersion(stdout) {
   const match = String(stdout ?? "").match(/v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/);
   if (!match) {
@@ -94,6 +114,7 @@ function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModul
 }
 
 export {
+  existingRunnableFile,
   exposeBinaryDirectory,
   isPathLike,
   normalizeOtaVersion,

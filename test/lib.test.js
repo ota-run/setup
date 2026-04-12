@@ -22,9 +22,12 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import {
+  existingRunnableFile,
   exposeBinaryDirectory,
   normalizeOtaVersion,
   otaBinaryName,
@@ -90,4 +93,28 @@ test("exposeBinaryDirectory does not add an existing directory twice", () => {
   const env = { PATH: `/tmp/ota/bin${path.delimiter}/usr/bin` };
   exposeBinaryDirectory("/tmp/ota/bin/ota", (value) => added.push(value), env);
   assert.deepEqual(added, []);
+});
+
+test("existingRunnableFile rejects directories", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ota-setup-dir-"));
+  await assert.rejects(async () => fs.access(path.join(directory, "missing")), /ENOENT/);
+  assert.equal(await existingRunnableFile(directory), false);
+  await fs.rm(directory, { recursive: true, force: true });
+});
+
+test("existingRunnableFile rejects non-executable files on posix", async (t) => {
+  if (process.platform === "win32") {
+    t.skip("POSIX execute-bit semantics do not apply on Windows");
+    return;
+  }
+
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ota-setup-file-"));
+  const file = path.join(directory, "ota");
+  await fs.writeFile(file, "#!/bin/sh\necho ota\n");
+  await fs.chmod(file, 0o644);
+  assert.equal(await existingRunnableFile(file), false);
+
+  await fs.chmod(file, 0o755);
+  assert.equal(await existingRunnableFile(file), true);
+  await fs.rm(directory, { recursive: true, force: true });
 });

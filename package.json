@@ -1,0 +1,21 @@
+{
+  "name": "@ota-run/setup",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Official GitHub Action for installing ota in GitHub Actions",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.js -o dist --license licenses.txt",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@actions/core": "^3.0.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3"
+  }
+}

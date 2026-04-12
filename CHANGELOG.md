@@ -24,6 +24,6 @@
 
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026-04-12
 
 - implemented `ota-run/setup` as the dedicated GitHub Action for installing ota into GitHub Actions jobs, exposing the selected binary path, resolved version, and install mode behavior without overloading `ota-run/action`.

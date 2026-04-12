@@ -37,6 +37,14 @@ That boundary is intentional:
 - [`ota-run/action`](https://github.com/ota-run/action) is the GitHub-native reporting wrapper
 - `ota-run/setup` is the installer/bootstrap wrapper
 
+## What `v1` does
+
+- installs ota through the official installer by default
+- adds the ota binary directory to `PATH` for later steps in the same job
+- supports Linux, macOS, and Windows GitHub Actions runners
+- can reuse an existing ota binary or fail closed when installation is disabled
+- exposes the selected binary path and resolved ota version as action outputs
+
 ## Intended workflow shape
 
 Use `ota-run/setup` when a job needs direct `ota` commands later in the same job:
@@ -52,22 +60,53 @@ steps:
 Pair it with `ota-run/action@v1` when the workflow also needs GitHub-native readiness summaries,
 annotations, comments, or receipt artifacts.
 
-## Current repo status
+## Inputs
 
-This repository is scaffolded and Ota-managed, but the action contract is not implemented yet.
+- `install`
+  - `auto`, `always`, or `never`
+  - default: `auto`
+- `ota-version`
+  - optional version such as `v1.4.4` or `1.4.4`
+- `ota-bin`
+  - Ota binary name or path to use after installation resolution
+  - default: `ota`
 
-That means:
+## Outputs
 
-- the repo is ready for the dedicated setup-action implementation
-- the public boundary is defined
-- the implementation should land here instead of overloading `ota-run/action`
+- `ota-bin`
+- `ota-version`
+- `installed`
+
+## Install behavior
+
+- `install: auto` reuses an existing ota binary when present and installs ota only when missing
+- `install: always` forces installer use before selecting the binary
+- `install: never` requires ota to already exist and fails closed otherwise
+- setting `ota-version` with `install: auto` promotes the run to installer mode so the requested version is honored
+
+## Release model
+
+The public action contract is published through Git tags:
+
+- immutable semver tags such as `v1.0.0`
+- a moving major tag such as `v1`
+
+Release prep is Ota-native:
+
+1. `ota run version:bump . --version patch`
+2. commit and push `main`
+3. create and push a semver tag such as `v1.0.0`
 
 ## Developing this repo
 
 This repository is managed through Ota.
 
 - `ota validate` checks the repo contract
+- `ota run setup` installs local dependencies
+- `ota run test` runs the test suite
+- `ota run build` refreshes the bundled action output
 - `ota run ci` runs the canonical verification path for this repo
+- `ota run version:bump . --version patch` prepares the next release version without creating a tag
 
 ## License
 

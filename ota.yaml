@@ -59,7 +59,7 @@ tasks:
       Use this after `ota run build` or inside CI to catch uncommitted action bundle drift.
     depends_on:
       - build
-    run: git diff --exit-code dist
+    run: node lib/verify-dist.mjs
     safe_for_agent: true
   ci:
     description: Canonical verification path for the setup action repo
@@ -68,7 +68,7 @@ tasks:
       It runs tests, rebuilds `dist/`, and fails if the committed bundle is stale.
     depends_on:
       - setup
-    run: npm test && npm run build && git diff --exit-code dist
+    run: npm test && npm run build && node lib/verify-dist.mjs
     safe_for_agent: true
   version:bump:
     description: Bump the setup action version before release

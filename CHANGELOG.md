@@ -24,7 +24,7 @@
 
 # Changelog
 
-## Unreleased
+## 1.0.1 - 2026-04-12
 
 - tightened binary discovery so the setup action only accepts runnable files instead of any existing filesystem entry, and documented the GitHub Actions runner shell prerequisites for installer mode on self-hosted runners.
 

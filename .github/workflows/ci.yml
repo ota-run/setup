@@ -33,6 +33,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
       - name: Install ota
         shell: bash
         run: |
@@ -44,3 +50,32 @@ jobs:
 
       - name: Verify
         run: ota run ci --stream
+
+  hosted-runner-smoke:
+    name: setup smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup ota
+        uses: ./
+        with:
+          install: always
+          ota-version: 1.4.4
+
+      - name: Verify ota on PATH
+        shell: pwsh
+        run: |
+          $ota = Get-Command ota -ErrorAction Stop
+          $version = & $ota.Source --version
+          if (-not $version) {
+            throw "ota --version produced no output"
+          }
+          Write-Host $version

@@ -25,28 +25,93 @@ project:
   name: '@ota-run/setup'
   type: application
   description: Official GitHub Action for installing ota in GitHub Actions
+runtimes:
+  node: "24"
+tools:
+  npm: "11"
 tasks:
-  ci:
-    description: Validate the scaffolded repo contract
+  setup:
+    description: Install action dependencies
     notes: |
-      Use this until the setup action implementation lands.
-      It keeps the repository Ota-managed and ensures the shipped contract remains valid.
-    run: ota validate
+      Use this after cloning or when the lockfile changes.
+      Run `ota run setup` before testing or building the action locally.
+    run: npm install
     safe_for_agent: true
+  test:
+    description: Run the setup action test suite
+    notes: |
+      Use this to verify installer mode parsing, version normalization, and binary path exposure behavior.
+    depends_on:
+      - setup
+    run: npm test
+    safe_for_agent: true
+  build:
+    description: Build the bundled GitHub Action dist output
+    notes: |
+      Use this after source changes so `dist/` stays in sync with `src/`.
+    depends_on:
+      - setup
+    run: npm run build
+    safe_for_agent: true
+  verify:dist:
+    description: Verify the committed dist output is current
+    notes: |
+      Use this after `ota run build` or inside CI to catch uncommitted action bundle drift.
+    depends_on:
+      - build
+    run: git diff --exit-code dist
+    safe_for_agent: true
+  ci:
+    description: Canonical verification path for the setup action repo
+    notes: |
+      Use this as the default local and CI verification path for the repo.
+      It runs tests, rebuilds `dist/`, and fails if the committed bundle is stale.
+    depends_on:
+      - setup
+    run: npm test && npm run build && git diff --exit-code dist
+    safe_for_agent: true
+  version:bump:
+    description: Bump the setup action version before release
+    notes: |
+      Use this when preparing a release. It updates package.json and package-lock.json and prints the next version.
+      From the repo root, use `ota run version:bump . --version minor` or `--version major` when you want a larger bump.
+      You do not need to know the current version first.
+      The task also accepts `patch`, `prerelease`, or an explicit semver value.
+    inputs:
+      version:
+        description: Version bump selector or explicit semver value
+        default: patch
+    depends_on:
+      - ci
+    run: node lib/bump-version.mjs
 execution:
   preferred: native
 agent:
+  entrypoint: setup
   default_task: ci
   safe_tasks:
+    - setup
+    - test
+    - build
+    - verify:dist
     - ci
   verify_after_changes:
-    - ci
+    - test
+    - build
+    - verify:dist
   writable_paths:
+    - src
+    - dist
+    - test
+    - .github
+    - lib
     - README.md
     - CHANGELOG.md
+    - action.yml
+    - package.json
+    - package-lock.json
     - ota.yaml
     - .gitignore
-    - .github
   protected_paths:
     - LICENSE
   bootstrap:
@@ -57,4 +122,13 @@ agent:
   notes: |
     Treat Ota as the default workflow for this repository.
     Use `ota validate` to verify the repo contract.
-    Use `ota run ci` as the canonical verification path until the setup action implementation lands.
+    Use `ota doctor` to inspect readiness and agent guidance.
+    Use `ota run setup` to install dependencies.
+    Use `ota run test` to verify the test suite.
+    Use `ota run build` to refresh the bundled action output.
+    Use `ota run verify:dist` to confirm `dist/` is committed and current.
+    Use `ota run ci` as the canonical verification path before release.
+    Use `ota run version:bump . --version patch` to prepare the next release version.
+    Use `ota run version:bump . --version minor` or `--version major` when you need a larger bump.
+    You do not need to know the current version first.
+    The task also accepts `prerelease` or an explicit semver value.

@@ -24,6 +24,10 @@
 
 # Changelog
 
+## 1.0.2 - 2026-04-12
+
+- fixed `ota run version:bump` so multi-segment prerelease identifiers and build metadata are parsed correctly instead of being truncated or misread.
+
 ## 1.0.1 - 2026-04-12
 
 - tightened binary discovery so the setup action only accepts runnable files instead of any existing filesystem entry, and documented the GitHub Actions runner shell prerequisites for installer mode on self-hosted runners.

@@ -47,6 +47,37 @@ Only install ota if it is missing and installation is approved.
 - `sh`: `curl -fsSL https://dist.ota.run/install.sh | sh`
 - `powershell`: `irm https://dist.ota.run/install.ps1 | iex`
 
+## Architecture
+
+This is a GitHub Action that bootstraps the `ota` CLI for use in GitHub Actions workflows.
+
+**Key components:**
+- `src/index.js`: Main action entry point that orchestrates installation and binary resolution
+- `src/lib.js`: Utility functions for cross-platform binary detection, version parsing, and path manipulation
+- `lib/bump-version.mjs`: Custom semver version bumper for package.json and package-lock.json
+- `lib/verify-dist.mjs`: Git-based validator to ensure dist/ bundle stays in sync with source
+- `dist/index.js`: Bundled action output (auto-generated via `npm run build`, committed to repo)
+
+**Cross-platform concerns:**
+- Binary resolution handles Windows executables (with .exe extension) and Unix binaries
+- Path handling uses both forward slashes and backslashes appropriately per platform
+- Installation directories check standard locations: `OTA_BIN_DIR` env var, `%LOCALAPPDATA%\ota\bin` on Windows, `~/.local/bin` and `~/.cargo/bin` on Unix
+- Command execution via `spawn()` with platform-specific shell defaults (powershell on Windows, sh on Unix)
+
+**Action inputs/outputs:**
+- Inputs: `install` (auto|always|never), `ota-version` (optional semantic version), `ota-bin` (binary name or path)
+- Outputs: `ota-bin` (resolved binary path), `ota-version` (installed version), `installed` (boolean)
+
+## Development patterns
+
+**Module system:** ES modules only (`"type": "module"` in package.json). Use `import` statements, Node.js built-in modules with `node:` prefix.
+
+**Testing:** Node.js built-in test runner via `node:test` and `node:assert/strict`. Test file: `test/lib.test.js` tests utility functions in isolation with both Unix and Windows platform mocking.
+
+**Build process:** `@vercel/ncc` bundles `src/index.js` into `dist/index.js` with licenses. The dist/ output is committed and must stay in sync (verified by `lib/verify-dist.mjs`). After source changes, always run `npm run build` and commit dist/.
+
+**Version management:** `bump-version.mjs` reads package.json/package-lock.json, computes next semver, and writes back. Supports `major`, `minor`, `patch`, `prerelease`, or explicit semver (e.g., `1.2.3-rc.0`).
+
 ## Notes
 
 Treat Ota as the default workflow for this repository.

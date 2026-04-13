@@ -68,7 +68,7 @@ jobs:
         uses: ./
         with:
           install: always
-          ota-version: 1.4.4
+          ota-version: 1.4.7
 
       - name: Verify ota on PATH
         shell: pwsh

@@ -24,6 +24,22 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 
+function getEnvValue(env, key) {
+  const direct = env[key];
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const normalizedKey = String(key).toLowerCase();
+  for (const candidateKey of Object.keys(env)) {
+    if (candidateKey.toLowerCase() === normalizedKey) {
+      return env[candidateKey];
+    }
+  }
+
+  return undefined;
+}
+
 function parseInstallMode(value) {
   const mode = String(value ?? "auto").trim().toLowerCase() || "auto";
   if (mode !== "auto" && mode !== "always" && mode !== "never") {
@@ -47,22 +63,30 @@ function otaBinaryName(platform = process.platform) {
 function otaInstallDirectories(env = process.env, platform = process.platform) {
   const pathApi = platform === "win32" ? path.win32 : path.posix;
   const directories = [];
-  if (env.OTA_BIN_DIR) {
-    directories.push(env.OTA_BIN_DIR);
+  const otaBinDir = getEnvValue(env, "OTA_BIN_DIR");
+  const localAppData = getEnvValue(env, "LOCALAPPDATA");
+  const home = getEnvValue(env, "HOME");
+  const userProfile = getEnvValue(env, "USERPROFILE");
+  const homeDrive = getEnvValue(env, "HOMEDRIVE");
+  const homePath = getEnvValue(env, "HOMEPATH");
+  const resolvedHome = home || userProfile || (homeDrive && homePath ? pathApi.join(homeDrive, homePath) : undefined);
+
+  if (otaBinDir) {
+    directories.push(otaBinDir);
   }
-  if (platform === "win32" && env.LOCALAPPDATA) {
-    directories.push(pathApi.join(env.LOCALAPPDATA, "ota", "bin"));
+  if (platform === "win32" && localAppData) {
+    directories.push(pathApi.join(localAppData, "ota", "bin"));
   }
-  if (env.HOME) {
-    directories.push(pathApi.join(env.HOME, ".local", "bin"));
-    directories.push(pathApi.join(env.HOME, ".cargo", "bin"));
+  if (resolvedHome) {
+    directories.push(pathApi.join(resolvedHome, ".local", "bin"));
+    directories.push(pathApi.join(resolvedHome, ".cargo", "bin"));
   }
   return [...new Set(directories)];
 }
 
 function pathEntries(env = process.env, platform = process.platform) {
   const delimiter = platform === "win32" ? path.win32.delimiter : path.posix.delimiter;
-  return String(env.PATH || "")
+  return String(getEnvValue(env, "PATH") || "")
     .split(delimiter)
     .map((entry) => entry.trim())
     .filter(Boolean);
@@ -101,7 +125,7 @@ function parseInstalledVersion(stdout) {
 
 function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModule = path) {
   const directory = pathModule.dirname(binaryPath);
-  const entries = String(env.PATH || "")
+  const entries = String(getEnvValue(env, "PATH") || "")
     .split(pathModule.delimiter)
     .map((entry) => entry.trim())
     .filter(Boolean);
@@ -114,6 +138,7 @@ function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModul
 }
 
 export {
+  getEnvValue,
   existingRunnableFile,
   exposeBinaryDirectory,
   isPathLike,

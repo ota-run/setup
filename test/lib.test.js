@@ -29,11 +29,13 @@ import path from "node:path";
 import {
   existingRunnableFile,
   exposeBinaryDirectory,
+  getEnvValue,
   normalizeOtaVersion,
   otaBinaryName,
   otaInstallDirectories,
   parseInstallMode,
-  parseInstalledVersion
+  parseInstalledVersion,
+  pathEntries
 } from "../src/lib.js";
 
 test("normalizeOtaVersion prefixes bare versions", () => {
@@ -72,6 +74,42 @@ test("otaInstallDirectories includes local app data on windows", () => {
     "C:\\Users\\bobai\\.local\\bin",
     "C:\\Users\\bobai\\.cargo\\bin"
   ]);
+});
+
+test("otaInstallDirectories reads env keys case-insensitively on windows", () => {
+  const directories = otaInstallDirectories({
+    LocalAppData: "C:\\Users\\bobai\\AppData\\Local",
+    Home: "C:\\Users\\bobai",
+    USERPROFILE: "C:\\Users\\alt"
+  }, "win32");
+  assert.deepEqual(directories, [
+    "C:\\Users\\bobai\\AppData\\Local\\ota\\bin",
+    "C:\\Users\\bobai\\.local\\bin",
+    "C:\\Users\\bobai\\.cargo\\bin"
+  ]);
+});
+
+test("otaInstallDirectories falls back to USERPROFILE and HOMEDRIVE/HOMEPATH", () => {
+  const withDrive = otaInstallDirectories({
+    HOMEDRIVE: "C:",
+    HOMEPATH: "\\Users\\runner",
+    LocalAppData: "C:\\Users\\runner\\AppData\\Local"
+  }, "win32");
+  assert.deepEqual(withDrive, [
+    "C:\\Users\\runner\\AppData\\Local\\ota\\bin",
+    "C:\\Users\\runner\\.local\\bin",
+    "C:\\Users\\runner\\.cargo\\bin"
+  ]);
+});
+
+test("pathEntries reads PATH regardless of key casing", () => {
+  const entries = pathEntries({ Path: "/usr/bin;/bin" }, "win32");
+  assert.deepEqual(entries, ["/usr/bin", "/bin"]);
+});
+
+test("getEnvValue reads environment keys case-insensitively", () => {
+  assert.equal(getEnvValue({ FoO: "bar" }, "foo"), "bar");
+  assert.equal(getEnvValue({ PATH: "a;b" }, "path"), "a;b");
 });
 
 test("parseInstalledVersion extracts ota version output", () => {

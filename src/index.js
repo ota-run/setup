@@ -26,6 +26,7 @@ import { spawn } from "node:child_process";
 import * as core from "@actions/core";
 
 import {
+  getEnvValue,
   existingRunnableFile,
   exposeBinaryDirectory,
   isPathLike,
@@ -68,7 +69,7 @@ async function runCommand(bin, args, cwd, env = process.env) {
 
 function executableCandidates(bin, env = process.env, platform = process.platform) {
   const extensions = platform === "win32"
-    ? (env.PATHEXT || ".EXE;.CMD;.BAT;.COM")
+    ? (getEnvValue(env, "PATHEXT") || ".EXE;.CMD;.BAT;.COM")
       .split(";")
       .filter(Boolean)
     : [""];

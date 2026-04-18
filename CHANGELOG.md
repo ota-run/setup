@@ -24,6 +24,10 @@
 
 # Changelog
 
+## Unreleased
+
+- aligned release docs and contract guidance with the current `ota run version:bump --version ...` form, including the rule that Ota command flags such as `--stream` should appear before task inputs.
+
 ## 1.0.2 - 2026-04-12
 
 - fixed `ota run version:bump` so multi-segment prerelease identifiers and build metadata are parsed correctly instead of being truncated or misread.

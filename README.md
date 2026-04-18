@@ -94,7 +94,8 @@ The public action contract is published through Git tags:
 
 Release prep is Ota-native:
 
-1. `ota run version:bump . --version patch`
+1. `ota run version:bump --version patch`
+   Put Ota command flags before task inputs, for example `ota run version:bump --stream --version patch`.
 2. commit and push `main`
 3. create and push a semver tag such as `v1.0.0`
 
@@ -107,7 +108,7 @@ This repository is managed through Ota.
 - `ota run test` runs the test suite
 - `ota run build` refreshes the bundled action output
 - `ota run ci` runs the canonical verification path for this repo
-- `ota run version:bump . --version patch` prepares the next release version without creating a tag
+- `ota run version:bump --version patch` prepares the next release version without creating a tag
 
 ## License
 

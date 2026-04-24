@@ -142,12 +142,11 @@ async function ensureOtaBinary(inputs, cwd) {
   const requestedVersion = normalizeOtaVersion(inputs.otaVersion);
   const preferred = inputs.otaBin || "ota";
   const binaryName = otaBinaryName();
-  const effectiveInstallMode = requestedVersion && installMode === "auto" ? "always" : installMode;
   const preferredExisting = await resolveExistingBinary(preferred);
 
   if (installMode === "never") {
     if (requestedVersion) {
-      throw new Error("ota-version requires install=auto or install=always; install=never cannot honor a requested installer version");
+      throw new Error("ota-version requires install=always; install=never cannot honor a requested installer version");
     }
     if (preferredExisting) {
       exposeBinaryDirectory(preferredExisting, core.addPath);
@@ -158,14 +157,8 @@ async function ensureOtaBinary(inputs, cwd) {
     );
   }
 
-  if (effectiveInstallMode === "auto" && preferredExisting) {
-    exposeBinaryDirectory(preferredExisting, core.addPath);
-    core.info(`Using existing ota binary at ${preferredExisting}`);
-    return { binaryPath: preferredExisting, installed: false };
-  }
-
   core.info(
-    `Installing ota ${requestedVersion || "latest"} via the official installer (${effectiveInstallMode} mode)`
+    `Installing ota ${requestedVersion || "latest"} via the official installer (${installMode} mode)`
   );
 
   const installResult = await installOta(requestedVersion, cwd);

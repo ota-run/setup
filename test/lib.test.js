@@ -47,7 +47,7 @@ test("normalizeOtaVersion prefixes bare versions", () => {
 });
 
 test("parseInstallMode accepts supported values", () => {
-  assert.equal(parseInstallMode("auto"), "auto");
+  assert.equal(parseInstallMode(""), "always");
   assert.equal(parseInstallMode("always"), "always");
   assert.equal(parseInstallMode("never"), "never");
   assert.throws(() => parseInstallMode("sometimes"), /unsupported install mode/i);

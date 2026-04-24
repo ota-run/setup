@@ -26,9 +26,9 @@ author: ota.run
 
 inputs:
   install:
-    description: "Ota installation mode. Supported values: auto, always, never."
+    description: "Ota installation mode. Supported values: always, never."
     required: false
-    default: auto
+    default: always
   ota-version:
     description: Optional ota version to install through the official installer.
     required: false

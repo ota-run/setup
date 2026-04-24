@@ -42,7 +42,7 @@ That boundary is intentional:
 - installs ota through the official installer by default
 - adds the ota binary directory to `PATH` for later steps in the same job
 - supports Linux, macOS, and Windows GitHub Actions runners
-- can reuse an existing ota binary or fail closed when installation is disabled
+- can fail closed when installation is disabled
 - exposes the selected binary path and resolved ota version as action outputs
 
 ## Intended workflow shape
@@ -98,8 +98,8 @@ steps:
 ## Inputs
 
 - `install`
-  - `auto`, `always`, or `never`
-  - default: `auto`
+  - `always` or `never`
+  - default: `always`
 - `ota-version`
   - optional version such as `v1.4.4` or `1.4.4`
 - `ota-bin`
@@ -114,10 +114,8 @@ steps:
 
 ## Install behavior
 
-- `install: auto` reuses an existing ota binary when present and installs ota only when missing
 - `install: always` forces installer use before selecting the binary
 - `install: never` requires ota to already exist and fails closed otherwise
-- setting `ota-version` with `install: auto` promotes the run to installer mode so the requested version is honored
 - the supported target is GitHub Actions runners; self-hosted runners should provide `pwsh` on Windows or `sh` plus `curl` on Unix-like runners when installer mode is used
 - when those installer prerequisites are missing, the action now fails with an explicit message telling operators to install the missing tool or switch to `install: never`
 

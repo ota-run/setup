@@ -30,6 +30,8 @@ import {
   existingRunnableFile,
   exposeBinaryDirectory,
   isPathLike,
+  installerPrerequisiteNames,
+  missingInstallerPrerequisiteMessage,
   normalizeOtaVersion,
   otaBinaryName,
   otaInstallDirectories,
@@ -101,6 +103,13 @@ async function installOta(version, cwd) {
   const env = { ...process.env };
   if (version) {
     env.OTA_VERSION = version;
+  }
+
+  for (const tool of installerPrerequisiteNames(process.platform)) {
+    const resolved = await resolveExistingBinary(tool, env, process.platform);
+    if (!resolved) {
+      throw new Error(missingInstallerPrerequisiteMessage(tool, process.platform));
+    }
   }
 
   if (process.platform === "win32") {

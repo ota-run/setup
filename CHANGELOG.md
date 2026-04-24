@@ -27,6 +27,8 @@
 ## Unreleased
 
 - aligned release docs and contract guidance with the current `ota run version:bump --version ...` form, including the rule that Ota command flags such as `--stream` should appear before task inputs.
+- added explicit installer prerequisite failures for missing `pwsh`, `sh`, or `curl`, with guidance to use `install: never` when runners are pre-provisioned.
+- strengthened the README examples around the intended `ota-run/setup` workflow: install Ota, then run raw `ota doctor` / `ota run ...` commands directly in the job.
 
 ## 1.0.2 - 2026-04-12
 

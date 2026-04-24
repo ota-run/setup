@@ -123,6 +123,17 @@ function parseInstalledVersion(stdout) {
   return normalized.startsWith("v") ? normalized : `v${normalized}`;
 }
 
+function installerPrerequisiteNames(platform = process.platform) {
+  return platform === "win32" ? ["pwsh"] : ["sh", "curl"];
+}
+
+function missingInstallerPrerequisiteMessage(tool, platform = process.platform) {
+  if (platform === "win32") {
+    return `official ota installer requires \`${tool}\` on Windows runners; install PowerShell or use \`install: never\` with ota already on PATH`;
+  }
+  return `official ota installer requires \`${tool}\` on Unix-like runners; install the missing tool or use \`install: never\` with ota already on PATH`;
+}
+
 function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModule = path) {
   const directory = pathModule.dirname(binaryPath);
   const entries = String(getEnvValue(env, "PATH") || "")
@@ -142,6 +153,8 @@ export {
   existingRunnableFile,
   exposeBinaryDirectory,
   isPathLike,
+  installerPrerequisiteNames,
+  missingInstallerPrerequisiteMessage,
   normalizeOtaVersion,
   otaBinaryName,
   otaInstallDirectories,

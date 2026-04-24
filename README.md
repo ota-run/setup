@@ -53,12 +53,47 @@ Use `ota-run/setup` when a job needs direct `ota` commands later in the same job
 steps:
   - uses: actions/checkout@v5
   - uses: ota-run/setup@v1
+  - run: ota doctor
   - run: ota run setup --stream
   - run: ota run ci --stream
 ```
 
 Pair it with `ota-run/action@v1` when the workflow also needs GitHub-native readiness summaries,
 annotations, comments, or receipt artifacts.
+
+## Recommended workflow
+
+Use `ota-run/setup@v1` when you want raw Ota commands to be the job contract:
+
+```yaml
+steps:
+  - uses: actions/checkout@v5
+  - uses: ota-run/setup@v1
+  - run: ota doctor
+  - run: ota run ci --stream
+```
+
+Use a pinned installer version when you want tighter rollout control:
+
+```yaml
+steps:
+  - uses: actions/checkout@v5
+  - uses: ota-run/setup@v1
+    with:
+      ota-version: v1.5.0
+  - run: ota doctor
+```
+
+Use `install: never` on self-hosted runners when Ota should already be provisioned and the job must fail closed instead of mutating the runner:
+
+```yaml
+steps:
+  - uses: actions/checkout@v5
+  - uses: ota-run/setup@v1
+    with:
+      install: never
+  - run: ota --version
+```
 
 ## Inputs
 
@@ -84,6 +119,7 @@ annotations, comments, or receipt artifacts.
 - `install: never` requires ota to already exist and fails closed otherwise
 - setting `ota-version` with `install: auto` promotes the run to installer mode so the requested version is honored
 - the supported target is GitHub Actions runners; self-hosted runners should provide `pwsh` on Windows or `sh` plus `curl` on Unix-like runners when installer mode is used
+- when those installer prerequisites are missing, the action now fails with an explicit message telling operators to install the missing tool or switch to `install: never`
 
 ## Release model
 

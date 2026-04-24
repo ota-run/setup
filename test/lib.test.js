@@ -30,6 +30,8 @@ import {
   existingRunnableFile,
   exposeBinaryDirectory,
   getEnvValue,
+  installerPrerequisiteNames,
+  missingInstallerPrerequisiteMessage,
   normalizeOtaVersion,
   otaBinaryName,
   otaInstallDirectories,
@@ -116,6 +118,23 @@ test("parseInstalledVersion extracts ota version output", () => {
   assert.equal(parseInstalledVersion("🦦 v1.4.4\n"), "v1.4.4");
   assert.equal(parseInstalledVersion("ota 1.4.4"), "v1.4.4");
   assert.throws(() => parseInstalledVersion("ready"), /unable to parse ota version/i);
+});
+
+test("installer prerequisites match hosted runner expectations", () => {
+  assert.deepEqual(installerPrerequisiteNames("linux"), ["sh", "curl"]);
+  assert.deepEqual(installerPrerequisiteNames("darwin"), ["sh", "curl"]);
+  assert.deepEqual(installerPrerequisiteNames("win32"), ["pwsh"]);
+});
+
+test("missing installer prerequisite messages point to install never fallback", () => {
+  assert.match(
+    missingInstallerPrerequisiteMessage("curl", "linux"),
+    /install the missing tool or use `install: never` with ota already on PATH/
+  );
+  assert.match(
+    missingInstallerPrerequisiteMessage("pwsh", "win32"),
+    /install PowerShell or use `install: never` with ota already on PATH/
+  );
 });
 
 test("exposeBinaryDirectory adds missing directories", () => {

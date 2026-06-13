@@ -26,6 +26,8 @@
 
 ## Unreleased
 
+## 1.0.3 - 2026-06-13
+
 - aligned the setup action guidance with the stronger ota installer contract: GitHub Actions jobs
   can now use the plain hosted installers without hand-written `GITHUB_PATH` glue because the
   installers export the resolved bin directory automatically, while `ota-run/setup` remains the

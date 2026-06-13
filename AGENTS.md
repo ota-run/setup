@@ -65,7 +65,7 @@ This is a GitHub Action that bootstraps the `ota` CLI for use in GitHub Actions 
 - Command execution via `spawn()` with platform-specific shell defaults (powershell on Windows, sh on Unix)
 
 **Action inputs/outputs:**
-- Inputs: `install` (auto|always|never), `ota-version` (optional semantic version), `ota-bin` (binary name or path)
+- Inputs: `install` (always|never), `ota-version` (optional semantic version), `ota-bin` (binary name or path)
 - Outputs: `ota-bin` (resolved binary path), `ota-version` (installed version), `installed` (boolean)
 
 ## Development patterns

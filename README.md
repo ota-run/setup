@@ -37,6 +37,11 @@ That boundary is intentional:
 - [`ota-run/action`](https://github.com/ota-run/action) is the GitHub-native reporting wrapper
 - `ota-run/setup` is the installer/bootstrap wrapper
 
+The plain hosted installers are now stronger in GitHub Actions too: when they run inside Actions,
+they export the resolved ota bin directory to `GITHUB_PATH` automatically, including the Windows
+`%LOCALAPPDATA%\\ota\\bin` path. `ota-run/setup` remains the preferred wrapper when you want a
+first-party GitHub Action surface with explicit outputs and deterministic binary selection.
+
 ## What `v1` does
 
 - installs ota through the official installer by default
@@ -60,6 +65,11 @@ steps:
 
 Pair it with `ota-run/action@v1` when the workflow also needs GitHub-native readiness summaries,
 annotations, comments, or receipt artifacts.
+
+Use the plain installer directly only when you intentionally do not want the GitHub Action wrapper.
+For example, a minimal workflow step such as `curl -fsSL https://dist.ota.run/install.sh | sh` is
+now safe in GitHub Actions without extra PATH glue, but it does not give you the setup action's
+outputs or explicit install policy surface.
 
 ## Recommended workflow
 

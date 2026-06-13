@@ -26,6 +26,11 @@
 
 ## Unreleased
 
+- aligned the setup action guidance with the stronger ota installer contract: GitHub Actions jobs
+  can now use the plain hosted installers without hand-written `GITHUB_PATH` glue because the
+  installers export the resolved bin directory automatically, while `ota-run/setup` remains the
+  preferred first-party wrapper when workflows want explicit outputs and deterministic binary
+  selection
 - aligned release docs and contract guidance with the current `ota run version:bump --version ...` form, including the rule that Ota command flags such as `--stream` should appear before task inputs.
 - added explicit installer prerequisite failures for missing `pwsh`, `sh`, or `curl`, with guidance to use `install: never` when runners are pre-provisioned.
 - strengthened the README examples around the intended `ota-run/setup` workflow: install Ota, then run raw `ota doctor` / `ota run ...` commands directly in the job.

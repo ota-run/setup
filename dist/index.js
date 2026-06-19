@@ -31128,6 +31128,32 @@ function pathEntries(env = process.env, platform = process.platform) {
     .filter(Boolean);
 }
 
+function postInstallBinaryDirectories(env = process.env, platform = process.platform) {
+  const directories = [];
+  const push = (value) => {
+    const normalized = String(value ?? "").trim();
+    if (!normalized || directories.includes(normalized)) {
+      return;
+    }
+    directories.push(normalized);
+  };
+
+  const otaBinDir = getEnvValue(env, "OTA_BIN_DIR");
+  if (otaBinDir) {
+    push(otaBinDir);
+  }
+
+  for (const entry of pathEntries(env, platform)) {
+    push(entry);
+  }
+
+  for (const directory of otaInstallDirectories(env, platform)) {
+    push(directory);
+  }
+
+  return directories;
+}
+
 function isPathLike(bin) {
   return bin.includes("/") || bin.includes("\\") || external_node_path_namespaceObject.isAbsolute(bin);
 }
@@ -31377,12 +31403,15 @@ async function ensureOtaBinary(inputs, cwd) {
     }
   }
 
-  for (const directory of otaInstallDirectories()) {
-    const candidate = external_node_path_namespaceObject.join(directory, binaryName);
-    if (await existingRunnableFile(candidate)) {
-      exposeBinaryDirectory(candidate, addPath);
-      info(`Using ota binary at ${candidate}`);
-      return { binaryPath: candidate, installed: true };
+  const binaryNames = [...new Set([preferred, binaryName].filter((value) => value && !isPathLike(value)))];
+  for (const directory of postInstallBinaryDirectories()) {
+    for (const name of binaryNames) {
+      const candidate = external_node_path_namespaceObject.join(directory, name);
+      if (await existingRunnableFile(candidate)) {
+        exposeBinaryDirectory(candidate, addPath);
+        info(`Using ota binary at ${candidate}`);
+        return { binaryPath: candidate, installed: true };
+      }
     }
   }
 

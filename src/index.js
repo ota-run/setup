@@ -34,7 +34,7 @@ import {
   missingInstallerPrerequisiteMessage,
   normalizeOtaVersion,
   otaBinaryName,
-  otaInstallDirectories,
+  postInstallBinaryDirectories,
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,
@@ -203,12 +203,15 @@ async function ensureOtaBinary(inputs, cwd) {
     }
   }
 
-  for (const directory of otaInstallDirectories()) {
-    const candidate = path.join(directory, binaryName);
-    if (await existingRunnableFile(candidate)) {
-      exposeBinaryDirectory(candidate, core.addPath);
-      core.info(`Using ota binary at ${candidate}`);
-      return { binaryPath: candidate, installed: true };
+  const binaryNames = [...new Set([preferred, binaryName].filter((value) => value && !isPathLike(value)))];
+  for (const directory of postInstallBinaryDirectories()) {
+    for (const name of binaryNames) {
+      const candidate = path.join(directory, name);
+      if (await existingRunnableFile(candidate)) {
+        exposeBinaryDirectory(candidate, core.addPath);
+        core.info(`Using ota binary at ${candidate}`);
+        return { binaryPath: candidate, installed: true };
+      }
     }
   }
 

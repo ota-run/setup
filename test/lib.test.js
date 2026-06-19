@@ -35,6 +35,7 @@ import {
   normalizeOtaVersion,
   otaBinaryName,
   otaInstallDirectories,
+  postInstallBinaryDirectories,
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,
@@ -116,6 +117,20 @@ test("otaInstallDirectories falls back to USERPROFILE and HOMEDRIVE/HOMEPATH", (
 test("pathEntries reads PATH regardless of key casing", () => {
   const entries = pathEntries({ Path: "/usr/bin;/bin" }, "win32");
   assert.deepEqual(entries, ["/usr/bin", "/bin"]);
+});
+
+test("postInstallBinaryDirectories prefers OTA_BIN_DIR and PATH before static fallbacks", () => {
+  const directories = postInstallBinaryDirectories({
+    OTA_BIN_DIR: "/tmp/ota-bin",
+    HOME: "/tmp/home",
+    PATH: "/tmp/home/.cargo/bin:/usr/bin:/tmp/home/.local/bin"
+  }, "linux");
+  assert.deepEqual(directories, [
+    "/tmp/ota-bin",
+    "/tmp/home/.cargo/bin",
+    "/usr/bin",
+    "/tmp/home/.local/bin"
+  ]);
 });
 
 test("getEnvValue reads environment keys case-insensitively", () => {

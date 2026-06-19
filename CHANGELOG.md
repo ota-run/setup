@@ -26,6 +26,10 @@
 
 ## Unreleased
 
+- fixed the setup repo's own bootstrap truth to use an exact Ota git revision during `1.6.21`
+  pressure testing instead of incorrectly claiming unreleased `v1.6.21` release truth in
+  `agent.bootstrap.ota.source`
+
 ## 1.0.7 - 2026-06-19
 
 - fixed the setup repo’s own self-hosting workflows to execute the checked-out local action

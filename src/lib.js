@@ -255,6 +255,32 @@ function pathEntries(env = process.env, platform = process.platform) {
     .filter(Boolean);
 }
 
+function postInstallBinaryDirectories(env = process.env, platform = process.platform) {
+  const directories = [];
+  const push = (value) => {
+    const normalized = String(value ?? "").trim();
+    if (!normalized || directories.includes(normalized)) {
+      return;
+    }
+    directories.push(normalized);
+  };
+
+  const otaBinDir = getEnvValue(env, "OTA_BIN_DIR");
+  if (otaBinDir) {
+    push(otaBinDir);
+  }
+
+  for (const entry of pathEntries(env, platform)) {
+    push(entry);
+  }
+
+  for (const directory of otaInstallDirectories(env, platform)) {
+    push(directory);
+  }
+
+  return directories;
+}
+
 function isPathLike(bin) {
   return bin.includes("/") || bin.includes("\\") || path.isAbsolute(bin);
 }
@@ -321,6 +347,7 @@ export {
   normalizeOtaVersion,
   otaBinaryName,
   otaInstallDirectories,
+  postInstallBinaryDirectories,
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,

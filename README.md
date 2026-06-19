@@ -48,6 +48,7 @@ first-party GitHub Action surface with explicit outputs and deterministic binary
 - adds the ota binary directory to `PATH` for later steps in the same job
 - supports Linux, macOS, and Windows GitHub Actions runners
 - can fail closed when installation is disabled
+- can derive install truth from `agent.bootstrap.ota.source` in `ota.yaml`
 - exposes the selected binary path and resolved ota version as action outputs
 
 ## Intended workflow shape
@@ -65,6 +66,18 @@ steps:
 
 Pair it with `ota-run/action@v1` when the workflow also needs GitHub-native readiness summaries,
 annotations, comments, or receipt artifacts.
+
+Use contract mode when the repo already owns Ota bootstrap truth in `ota.yaml` and the workflow
+should not restate `OTA_VERSION`, `OTA_GIT_REV`, `OTA_GIT_BRANCH`, or `--from-git` separately:
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+  - uses: ota-run/setup@v1
+    with:
+      source: contract
+  - run: ota run ci --stream
+```
 
 Use the plain installer directly only when you intentionally do not want the GitHub Action wrapper.
 For example, a minimal workflow step such as `curl -fsSL https://dist.ota.run/install.sh | sh` is
@@ -94,6 +107,18 @@ steps:
   - run: ota doctor
 ```
 
+Use `source: contract` when the repo contract is the single source of truth:
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+  - uses: ota-run/setup@v1
+    with:
+      source: contract
+      contract-path: ota.yaml
+  - run: ota doctor
+```
+
 Use `install: never` on self-hosted runners when Ota should already be provisioned and the job must fail closed instead of mutating the runner:
 
 ```yaml
@@ -110,8 +135,14 @@ steps:
 - `install`
   - `always` or `never`
   - default: `always`
+- `source`
+  - `explicit` or `contract`
+  - default: `explicit`
+- `contract-path`
+  - path to `ota.yaml` or a repo directory containing it when `source=contract`
+  - default: `ota.yaml`
 - `ota-version`
-  - optional version such as `v1.4.4` or `1.4.4`
+  - optional version such as `v1.4.4` or `1.4.4` when `source=explicit`
 - `ota-bin`
   - Ota binary name or path to use after installation resolution
   - default: `ota`
@@ -121,11 +152,16 @@ steps:
 - `ota-bin`
 - `ota-version`
 - `installed`
+- `source-kind`
+- `contract-path`
 
 ## Install behavior
 
 - `install: always` forces installer use before selecting the binary
 - `install: never` requires ota to already exist and fails closed otherwise
+- `source: explicit` keeps workflow-owned install truth, optionally through `ota-version`
+- `source: contract` reads `agent.bootstrap.ota.source` from the checked-out contract and supports
+  structured `kind: version`, `kind: git_rev`, `kind: branch`, plus legacy shell inference
 - the supported target is GitHub Actions runners; self-hosted runners should provide `pwsh` on Windows or `sh` plus `curl` on Unix-like runners when installer mode is used
 - when those installer prerequisites are missing, the action now fails with an explicit message telling operators to install the missing tool or switch to `install: never`
 

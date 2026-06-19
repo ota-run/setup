@@ -48,12 +48,175 @@ function parseInstallMode(value) {
   return mode;
 }
 
+function parseSourceMode(value) {
+  const mode = String(value ?? "explicit").trim().toLowerCase() || "explicit";
+  if (mode !== "explicit" && mode !== "contract") {
+    throw new Error(`unsupported source mode: ${mode}`);
+  }
+  return mode;
+}
+
 function normalizeOtaVersion(value) {
   if (value === undefined || value === null || String(value).trim() === "") {
     return "";
   }
   const normalized = String(value).trim();
   return normalized.startsWith("v") ? normalized : `v${normalized}`;
+}
+
+function stripWrappingQuotes(value) {
+  const text = String(value ?? "");
+  if ((text.startsWith("\"") && text.endsWith("\"")) || (text.startsWith("'") && text.endsWith("'"))) {
+    return text.slice(1, -1);
+  }
+  return text;
+}
+
+function stripInlineComment(value) {
+  let out = "";
+  let inSingle = false;
+  let inDouble = false;
+  let prev = "";
+
+  for (const ch of String(value ?? "")) {
+    if (ch === "\"" && !inSingle && prev !== "\\") {
+      inDouble = !inDouble;
+    } else if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+    } else if (ch === "#" && !inSingle && !inDouble) {
+      break;
+    }
+    out += ch;
+    prev = ch;
+  }
+
+  return out.trim();
+}
+
+function parseTargetedYamlFields(text, fieldPaths) {
+  const targetSet = new Set(fieldPaths);
+  const values = new Map();
+  const keys = [];
+  const indents = [];
+
+  for (const rawLine of String(text ?? "").split(/\r?\n/)) {
+    if (!rawLine.trim() || rawLine.trimStart().startsWith("#")) {
+      continue;
+    }
+
+    let indent = 0;
+    while (indent < rawLine.length && rawLine[indent] === " ") {
+      indent += 1;
+    }
+
+    const trimmed = rawLine.slice(indent);
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, colonIndex).trim();
+    if (!key || key.startsWith("#") || key.startsWith("-")) {
+      continue;
+    }
+
+    const rawValue = stripInlineComment(trimmed.slice(colonIndex + 1));
+
+    while (indents.length > 0 && indents[indents.length - 1] >= indent) {
+      indents.pop();
+      keys.pop();
+    }
+
+    indents.push(indent);
+    keys.push(key);
+
+    if (!rawValue) {
+      continue;
+    }
+
+    const path = keys.join(".");
+    if (targetSet.has(path)) {
+      values.set(path, stripWrappingQuotes(rawValue));
+    }
+  }
+
+  return values;
+}
+
+function inferBootstrapSourceFromCommand(command) {
+  const text = String(command ?? "");
+  const matchers = [
+    { kind: "branch", patterns: ["OTA_GIT_BRANCH", "\\$env:OTA_GIT_BRANCH"] },
+    { kind: "git_rev", patterns: ["OTA_GIT_REV", "\\$env:OTA_GIT_REV"] },
+    { kind: "version", patterns: ["OTA_VERSION", "\\$env:OTA_VERSION"] }
+  ];
+
+  for (const matcher of matchers) {
+    for (const pattern of matcher.patterns) {
+      const regex = new RegExp(`${pattern}\\s*=\\s*['"]?([^'"\\s;|]+)['"]?`);
+      const match = text.match(regex);
+      if (match) {
+        return { kind: matcher.kind, value: match[1] };
+      }
+    }
+  }
+
+  return null;
+}
+
+async function resolveBootstrapSourceFromContract(contractPath) {
+  const stat = await fs.stat(contractPath).catch(() => null);
+  let resolvedPath = contractPath;
+  if (stat?.isDirectory()) {
+    resolvedPath = path.join(contractPath, "ota.yaml");
+  }
+
+  const contract = await fs.readFile(resolvedPath, "utf8").catch((error) => {
+    throw new Error(`failed to read contract \`${contractPath}\`: ${error.message}`);
+  });
+
+  const values = parseTargetedYamlFields(contract, [
+    "agent.bootstrap.ota.source.kind",
+    "agent.bootstrap.ota.source.version",
+    "agent.bootstrap.ota.source.rev",
+    "agent.bootstrap.ota.source.branch",
+    "agent.bootstrap.ota.sh",
+    "agent.bootstrap.ota.powershell"
+  ]);
+
+  let kind = values.get("agent.bootstrap.ota.source.kind") || "";
+  let version = values.get("agent.bootstrap.ota.source.version") || "";
+  let rev = values.get("agent.bootstrap.ota.source.rev") || "";
+  let branch = values.get("agent.bootstrap.ota.source.branch") || "";
+
+  if (!kind) {
+    const inferred = inferBootstrapSourceFromCommand(values.get("agent.bootstrap.ota.sh"))
+      || inferBootstrapSourceFromCommand(values.get("agent.bootstrap.ota.powershell"));
+    if (inferred) {
+      kind = inferred.kind;
+      if (kind === "version") {
+        version = inferred.value;
+      } else if (kind === "git_rev") {
+        rev = inferred.value;
+      } else if (kind === "branch") {
+        branch = inferred.value;
+      }
+    }
+  }
+
+  if (kind === "version" && version) {
+    return { contractPath: resolvedPath, kind, version: normalizeOtaVersion(version) };
+  }
+  if (kind === "git_rev" && rev) {
+    return { contractPath: resolvedPath, kind, rev };
+  }
+  if (kind === "branch" && branch) {
+    return { contractPath: resolvedPath, kind, branch };
+  }
+
+  throw new Error(
+    `contract \`${resolvedPath}\` does not declare a usable agent.bootstrap.ota source`
+  );
 }
 
 function otaBinaryName(platform = process.platform) {
@@ -159,6 +322,8 @@ export {
   otaBinaryName,
   otaInstallDirectories,
   parseInstallMode,
+  parseSourceMode,
   parseInstalledVersion,
-  pathEntries
+  pathEntries,
+  resolveBootstrapSourceFromContract
 };

@@ -25,12 +25,20 @@ description: Install ota in GitHub Actions and put it on PATH for later workflow
 author: ota.run
 
 inputs:
+  source:
+    description: "Installer authority mode. Supported values: explicit, contract."
+    required: false
+    default: explicit
   install:
     description: "Ota installation mode. Supported values: always, never."
     required: false
     default: always
+  contract-path:
+    description: Path to ota.yaml or a repo directory containing ota.yaml when source=contract.
+    required: false
+    default: ota.yaml
   ota-version:
-    description: Optional ota version to install through the official installer.
+    description: Optional ota version to install through the official installer when source=explicit.
     required: false
   ota-bin:
     description: Ota binary name or path to use after installation resolution.
@@ -44,6 +52,10 @@ outputs:
     description: Resolved ota version reported by the selected binary.
   installed:
     description: Whether the action performed installation during this run.
+  source-kind:
+    description: Resolved bootstrap source kind when source=contract.
+  contract-path:
+    description: Resolved ota contract path when source=contract.
 
 runs:
   using: node24

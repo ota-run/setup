@@ -36,8 +36,10 @@ import {
   otaBinaryName,
   otaInstallDirectories,
   parseInstallMode,
+  parseSourceMode,
   parseInstalledVersion,
-  pathEntries
+  pathEntries,
+  resolveBootstrapSourceFromContract
 } from "./lib.js";
 
 async function runCommand(bin, args, cwd, env = process.env) {
@@ -99,10 +101,21 @@ async function resolveExistingBinary(bin, env = process.env, platform = process.
   return null;
 }
 
-async function installOta(version, cwd) {
+async function installOta(source, cwd) {
   const env = { ...process.env };
-  if (version) {
-    env.OTA_VERSION = version;
+  delete env.OTA_VERSION;
+  delete env.OTA_GIT_REV;
+  delete env.OTA_GIT_BRANCH;
+
+  let fromGit = false;
+  if (source?.kind === "version" && source.version) {
+    env.OTA_VERSION = source.version;
+  } else if (source?.kind === "git_rev" && source.rev) {
+    env.OTA_GIT_REV = source.rev;
+    fromGit = true;
+  } else if (source?.kind === "branch" && source.branch) {
+    env.OTA_GIT_BRANCH = source.branch;
+    fromGit = true;
   }
 
   for (const tool of installerPrerequisiteNames(process.platform)) {
@@ -113,17 +126,23 @@ async function installOta(version, cwd) {
   }
 
   if (process.platform === "win32") {
+    const command = fromGit
+      ? "& ([scriptblock]::Create((irm https://dist.ota.run/install.ps1))) -FromGit"
+      : "irm https://dist.ota.run/install.ps1 | iex";
     return await runCommand(
       "pwsh",
-      ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "irm https://dist.ota.run/install.ps1 | iex"],
+      ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
       cwd,
       env
     );
   }
 
+  const command = fromGit
+    ? "curl -fsSL https://dist.ota.run/install.sh | sh -s -- --from-git"
+    : "curl -fsSL https://dist.ota.run/install.sh | sh";
   return await runCommand(
     "sh",
-    ["-c", "curl -fsSL https://dist.ota.run/install.sh | sh"],
+    ["-c", command],
     cwd,
     env
   );
@@ -140,6 +159,9 @@ async function resolveInstalledVersion(binaryPath, cwd) {
 async function ensureOtaBinary(inputs, cwd) {
   const installMode = parseInstallMode(inputs.install);
   const requestedVersion = normalizeOtaVersion(inputs.otaVersion);
+  const requestedSource = requestedVersion
+    ? { kind: "version", version: requestedVersion }
+    : { kind: "version", version: "" };
   const preferred = inputs.otaBin || "ota";
   const binaryName = otaBinaryName();
   const preferredExisting = await resolveExistingBinary(preferred);
@@ -161,7 +183,7 @@ async function ensureOtaBinary(inputs, cwd) {
     `Installing ota ${requestedVersion || "latest"} via the official installer (${installMode} mode)`
   );
 
-  const installResult = await installOta(requestedVersion, cwd);
+  const installResult = await installOta(inputs.installSource || requestedSource, cwd);
   if (installResult.stdout.trim()) {
     core.info(installResult.stdout.trim());
   }
@@ -205,10 +227,24 @@ async function ensureOtaBinary(inputs, cwd) {
 async function main() {
   const cwd = process.cwd();
   const inputs = {
+    source: core.getInput("source"),
     install: core.getInput("install"),
+    contractPath: core.getInput("contract-path"),
     otaVersion: core.getInput("ota-version"),
     otaBin: core.getInput("ota-bin")
   };
+
+  const sourceMode = parseSourceMode(inputs.source);
+  if (sourceMode === "contract" && inputs.otaVersion.trim()) {
+    throw new Error("ota-version cannot be set when source=contract; derive install truth from agent.bootstrap.ota.source instead");
+  }
+
+  let contractBootstrap = null;
+  if (sourceMode === "contract") {
+    contractBootstrap = await resolveBootstrapSourceFromContract(inputs.contractPath || "ota.yaml");
+    inputs.otaVersion = contractBootstrap.kind === "version" ? contractBootstrap.version : "";
+    inputs.installSource = contractBootstrap;
+  }
 
   const { binaryPath, installed } = await ensureOtaBinary(inputs, cwd);
   const resolvedVersion = await resolveInstalledVersion(binaryPath, cwd);
@@ -216,6 +252,8 @@ async function main() {
   core.setOutput("ota-bin", binaryPath);
   core.setOutput("ota-version", resolvedVersion);
   core.setOutput("installed", installed ? "true" : "false");
+  core.setOutput("source-kind", contractBootstrap?.kind || "");
+  core.setOutput("contract-path", contractBootstrap?.contractPath || "");
   core.info(`ota ready at ${binaryPath} (${resolvedVersion})`);
 }
 

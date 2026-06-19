@@ -36,8 +36,10 @@ import {
   otaBinaryName,
   otaInstallDirectories,
   parseInstallMode,
+  parseSourceMode,
   parseInstalledVersion,
-  pathEntries
+  pathEntries,
+  resolveBootstrapSourceFromContract
 } from "../src/lib.js";
 
 test("normalizeOtaVersion prefixes bare versions", () => {
@@ -51,6 +53,13 @@ test("parseInstallMode accepts supported values", () => {
   assert.equal(parseInstallMode("always"), "always");
   assert.equal(parseInstallMode("never"), "never");
   assert.throws(() => parseInstallMode("sometimes"), /unsupported install mode/i);
+});
+
+test("parseSourceMode accepts supported values", () => {
+  assert.equal(parseSourceMode(""), "explicit");
+  assert.equal(parseSourceMode("explicit"), "explicit");
+  assert.equal(parseSourceMode("contract"), "contract");
+  assert.throws(() => parseSourceMode("repo"), /unsupported source mode/i);
 });
 
 test("otaBinaryName follows platform conventions", () => {
@@ -173,5 +182,72 @@ test("existingRunnableFile rejects non-executable files on posix", async (t) => 
 
   await fs.chmod(file, 0o755);
   assert.equal(await existingRunnableFile(file), true);
+  await fs.rm(directory, { recursive: true, force: true });
+});
+
+test("resolveBootstrapSourceFromContract reads structured version truth", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ota-setup-contract-"));
+  const contract = path.join(directory, "ota.yaml");
+  await fs.writeFile(contract, `version: 1
+project:
+  name: demo
+agent:
+  bootstrap:
+    ota:
+      source:
+        kind: version
+        version: 1.6.21
+`);
+
+  const resolved = await resolveBootstrapSourceFromContract(contract);
+  assert.deepEqual(resolved, {
+    contractPath: contract,
+    kind: "version",
+    version: "v1.6.21"
+  });
+  await fs.rm(directory, { recursive: true, force: true });
+});
+
+test("resolveBootstrapSourceFromContract reads structured git rev truth", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ota-setup-contract-"));
+  const contract = path.join(directory, "ota.yaml");
+  await fs.writeFile(contract, `version: 1
+project:
+  name: demo
+agent:
+  bootstrap:
+    ota:
+      source:
+        kind: git_rev
+        rev: 756b2b982e42de1b09a76a6d53c59962a94c2a30
+`);
+
+  const resolved = await resolveBootstrapSourceFromContract(directory);
+  assert.deepEqual(resolved, {
+    contractPath: contract,
+    kind: "git_rev",
+    rev: "756b2b982e42de1b09a76a6d53c59962a94c2a30"
+  });
+  await fs.rm(directory, { recursive: true, force: true });
+});
+
+test("resolveBootstrapSourceFromContract infers legacy shell truth", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "ota-setup-contract-"));
+  const contract = path.join(directory, "ota.yaml");
+  await fs.writeFile(contract, `version: 1
+project:
+  name: demo
+agent:
+  bootstrap:
+    ota:
+      sh: curl -fsSL https://dist.ota.run/install.sh | OTA_GIT_BRANCH=1.6.21-implementation sh -s -- --from-git
+`);
+
+  const resolved = await resolveBootstrapSourceFromContract(contract);
+  assert.deepEqual(resolved, {
+    contractPath: contract,
+    kind: "branch",
+    branch: "1.6.21-implementation"
+  });
   await fs.rm(directory, { recursive: true, force: true });
 });

@@ -26,6 +26,12 @@
 
 ## Unreleased
 
+## 1.0.5 - 2026-06-19
+
+- fixed `source: contract` with `install: never`, so the setup action now correctly resolves and
+  uses an existing ota binary on PATH instead of incorrectly rejecting contract-derived version
+  truth as if it were an explicit `ota-version` request
+
 ## 1.0.4 - 2026-06-19
 
 - widened `ota-run/setup` with a contract-owned install mode: workflows can now set

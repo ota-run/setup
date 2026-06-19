@@ -31341,7 +31341,7 @@ async function ensureOtaBinary(inputs, cwd) {
   const preferredExisting = await resolveExistingBinary(preferred);
 
   if (installMode === "never") {
-    if (requestedVersion) {
+    if (requestedVersion && inputs.source !== "contract") {
       throw new Error("ota-version requires install=always; install=never cannot honor a requested installer version");
     }
     if (preferredExisting) {

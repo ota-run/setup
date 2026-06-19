@@ -53,7 +53,7 @@ jobs:
       - name: Setup ota
         uses: ota-run/setup@v1
         with:
-          ota-version: 1.6.1
+          source: contract
 
       - name: Verify release candidate
         run: ota run ci --stream

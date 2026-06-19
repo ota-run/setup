@@ -26,6 +26,12 @@
 
 ## Unreleased
 
+## 1.0.6 - 2026-06-19
+
+- fixed the setup repo’s own CI and release workflows to consume repo-owned bootstrap truth
+  through `ota-run/setup@v1` with `source: contract`, so tagged releases no longer pin an older
+  Ota binary that cannot parse the repository’s current `agent.bootstrap.ota.source` contract
+
 ## 1.0.5 - 2026-06-19
 
 - fixed `source: contract` with `install: never`, so the setup action now correctly resolves and

@@ -153,6 +153,9 @@ steps:
 - `ota-version`
 - `installed`
 - `source-kind`
+- `source-version`
+- `source-git-rev`
+- `source-git-branch`
 - `contract-path`
 
 ## Install behavior

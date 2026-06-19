@@ -26,6 +26,8 @@
 
 ## Unreleased
 
+## 1.0.4 - 2026-06-19
+
 - widened `ota-run/setup` with a contract-owned install mode: workflows can now set
   `source: contract` and optionally `contract-path`, letting the action read
   `agent.bootstrap.ota.source` from `ota.yaml` and install the matching released version,

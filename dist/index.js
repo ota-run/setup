@@ -31427,6 +31427,9 @@ async function main() {
   setOutput("ota-version", resolvedVersion);
   setOutput("installed", installed ? "true" : "false");
   setOutput("source-kind", contractBootstrap?.kind || "");
+  setOutput("source-version", contractBootstrap?.version || "");
+  setOutput("source-git-rev", contractBootstrap?.rev || "");
+  setOutput("source-git-branch", contractBootstrap?.branch || "");
   setOutput("contract-path", contractBootstrap?.contractPath || "");
   info(`ota ready at ${binaryPath} (${resolvedVersion})`);
 }

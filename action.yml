@@ -54,6 +54,12 @@ outputs:
     description: Whether the action performed installation during this run.
   source-kind:
     description: Resolved bootstrap source kind when source=contract.
+  source-version:
+    description: Resolved bootstrap version when source-kind=version.
+  source-git-rev:
+    description: Resolved bootstrap git revision when source-kind=git_rev.
+  source-git-branch:
+    description: Resolved bootstrap git branch when source-kind=branch.
   contract-path:
     description: Resolved ota contract path when source=contract.
 

@@ -253,6 +253,9 @@ async function main() {
   core.setOutput("ota-version", resolvedVersion);
   core.setOutput("installed", installed ? "true" : "false");
   core.setOutput("source-kind", contractBootstrap?.kind || "");
+  core.setOutput("source-version", contractBootstrap?.version || "");
+  core.setOutput("source-git-rev", contractBootstrap?.rev || "");
+  core.setOutput("source-git-branch", contractBootstrap?.branch || "");
   core.setOutput("contract-path", contractBootstrap?.contractPath || "");
   core.info(`ota ready at ${binaryPath} (${resolvedVersion})`);
 }

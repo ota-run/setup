@@ -29,6 +29,10 @@
 - fixed the setup repo's own bootstrap truth to use an exact Ota git revision during `1.6.21`
   pressure testing instead of incorrectly claiming unreleased `v1.6.21` release truth in
   `agent.bootstrap.ota.source`
+- fixed the setup repo's own `Ota Readiness` workflow to install Ota from the repo contract
+  first and run `ota-run/action` with `install: never`, so readiness proof no longer falls back
+  to released `v1.6.20` while the repo contract is pressure-testing unreleased structured
+  bootstrap truth
 
 ## 1.0.7 - 2026-06-19
 

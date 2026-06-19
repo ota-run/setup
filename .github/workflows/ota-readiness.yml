@@ -40,6 +40,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - name: Setup ota
+        uses: ./
+        with:
+          source: contract
       - name: Publish ota readiness
         uses: ota-run/action@v1
         with:
@@ -47,4 +51,5 @@ jobs:
           path: .
           archive: true
           artifact-name: ota-readiness
+          install: never
           github-token: ${{ github.token }}

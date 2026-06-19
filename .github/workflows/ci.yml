@@ -40,7 +40,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Setup ota
-        uses: ota-run/setup@v1
+        uses: ./
         with:
           source: contract
 

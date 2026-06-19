@@ -26,6 +26,12 @@
 
 ## Unreleased
 
+## 1.0.7 - 2026-06-19
+
+- fixed the setup repo’s own self-hosting workflows to execute the checked-out local action
+  (`uses: ./`) instead of the previously published `ota-run/setup@v1`, so CI and tagged releases
+  now verify the current repo state rather than an older already-published action build
+
 ## 1.0.6 - 2026-06-19
 
 - fixed the setup repo’s own CI and release workflows to consume repo-owned bootstrap truth

@@ -51,7 +51,7 @@ jobs:
           cache: npm
 
       - name: Setup ota
-        uses: ota-run/setup@v1
+        uses: ./
         with:
           source: contract
 

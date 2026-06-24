@@ -27,9 +27,11 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  describeInstallSource,
   existingRunnableFile,
   exposeBinaryDirectory,
   getEnvValue,
+  installerEnvForSource,
   installerPrerequisiteNames,
   missingInstallerPrerequisiteMessage,
   normalizeOtaVersion,
@@ -47,6 +49,43 @@ test("normalizeOtaVersion prefixes bare versions", () => {
   assert.equal(normalizeOtaVersion("1.4.4"), "v1.4.4");
   assert.equal(normalizeOtaVersion("v1.4.4"), "v1.4.4");
   assert.equal(normalizeOtaVersion(""), "");
+});
+
+test("describeInstallSource renders release and git sources honestly", () => {
+  assert.equal(describeInstallSource({ kind: "version", version: "1.6.22" }), "release v1.6.22");
+  assert.equal(describeInstallSource({ kind: "version", version: "" }), "latest release");
+  assert.equal(
+    describeInstallSource({ kind: "git_rev", rev: "ec8e416cf07f7a6cfa13b61d1ec8d79e74c86f4d" }),
+    "git revision ec8e416cf07f7a6cfa13b61d1ec8d79e74c86f4d"
+  );
+  assert.equal(
+    describeInstallSource({ kind: "branch", branch: "1.6.22-implementation" }),
+    "git branch 1.6.22-implementation"
+  );
+});
+
+test("installerEnvForSource enables cargo cli fetch for git installs", () => {
+  const versionEnv = installerEnvForSource(
+    { kind: "version", version: "1.6.22" },
+    { OTA_GIT_REV: "stale", PATH: "/usr/bin" }
+  );
+  assert.equal(versionEnv.OTA_VERSION, "v1.6.22");
+  assert.equal(versionEnv.OTA_GIT_REV, undefined);
+  assert.equal(versionEnv.CARGO_NET_GIT_FETCH_WITH_CLI, undefined);
+
+  const gitRevEnv = installerEnvForSource(
+    { kind: "git_rev", rev: "ec8e416cf07f7a6cfa13b61d1ec8d79e74c86f4d" },
+    { PATH: "/usr/bin" }
+  );
+  assert.equal(gitRevEnv.OTA_GIT_REV, "ec8e416cf07f7a6cfa13b61d1ec8d79e74c86f4d");
+  assert.equal(gitRevEnv.CARGO_NET_GIT_FETCH_WITH_CLI, "true");
+
+  const branchEnv = installerEnvForSource(
+    { kind: "branch", branch: "1.6.22-implementation" },
+    { PATH: "/usr/bin", CARGO_NET_GIT_FETCH_WITH_CLI: "false" }
+  );
+  assert.equal(branchEnv.OTA_GIT_BRANCH, "1.6.22-implementation");
+  assert.equal(branchEnv.CARGO_NET_GIT_FETCH_WITH_CLI, "false");
 });
 
 test("parseInstallMode accepts supported values", () => {

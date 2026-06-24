@@ -26,6 +26,13 @@
 
 ## Unreleased
 
+- hardened git-revision and branch installs by exporting `CARGO_NET_GIT_FETCH_WITH_CLI=true`
+  through the official installer path when `source: contract` or explicit git source truth selects
+  an unreleased Ota revision, so GitHub Actions jobs no longer depend on Cargo's flakier libgit
+  transport for repo-owned source installs
+- fixed setup action install logging so contract-owned git revision and branch installs are
+  reported as `git revision ...` / `git branch ...` instead of the misleading generic `latest`
+  release wording
 - fixed the setup repo's own bootstrap truth to use an exact Ota git revision during `1.6.21`
   pressure testing instead of incorrectly claiming unreleased `v1.6.21` release truth in
   `agent.bootstrap.ota.source`

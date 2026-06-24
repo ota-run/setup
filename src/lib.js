@@ -64,6 +64,45 @@ function normalizeOtaVersion(value) {
   return normalized.startsWith("v") ? normalized : `v${normalized}`;
 }
 
+function describeInstallSource(source) {
+  if (source?.kind === "version") {
+    return source.version ? `release ${normalizeOtaVersion(source.version)}` : "latest release";
+  }
+  if (source?.kind === "git_rev" && source.rev) {
+    return `git revision ${source.rev}`;
+  }
+  if (source?.kind === "branch" && source.branch) {
+    return `git branch ${source.branch}`;
+  }
+  return "latest release";
+}
+
+function installerEnvForSource(source, baseEnv = process.env) {
+  const env = { ...baseEnv };
+  delete env.OTA_VERSION;
+  delete env.OTA_GIT_REV;
+  delete env.OTA_GIT_BRANCH;
+
+  if (source?.kind === "version" && source.version) {
+    env.OTA_VERSION = normalizeOtaVersion(source.version);
+    return env;
+  }
+
+  if (source?.kind === "git_rev" && source.rev) {
+    env.OTA_GIT_REV = source.rev;
+    env.CARGO_NET_GIT_FETCH_WITH_CLI = env.CARGO_NET_GIT_FETCH_WITH_CLI || "true";
+    return env;
+  }
+
+  if (source?.kind === "branch" && source.branch) {
+    env.OTA_GIT_BRANCH = source.branch;
+    env.CARGO_NET_GIT_FETCH_WITH_CLI = env.CARGO_NET_GIT_FETCH_WITH_CLI || "true";
+    return env;
+  }
+
+  return env;
+}
+
 function stripWrappingQuotes(value) {
   const text = String(value ?? "");
   if ((text.startsWith("\"") && text.endsWith("\"")) || (text.startsWith("'") && text.endsWith("'"))) {
@@ -338,9 +377,11 @@ function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModul
 }
 
 export {
+  describeInstallSource,
   getEnvValue,
   existingRunnableFile,
   exposeBinaryDirectory,
+  installerEnvForSource,
   isPathLike,
   installerPrerequisiteNames,
   missingInstallerPrerequisiteMessage,

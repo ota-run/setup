@@ -165,6 +165,9 @@ steps:
 - `source: explicit` keeps workflow-owned install truth, optionally through `ota-version`
 - `source: contract` reads `agent.bootstrap.ota.source` from the checked-out contract and supports
   structured `kind: version`, `kind: git_rev`, `kind: branch`, plus legacy shell inference
+- when that resolved source is a git revision or branch, the action enables Cargo's CLI git fetch
+  path through `CARGO_NET_GIT_FETCH_WITH_CLI=true` so unreleased source installs are more reliable
+  on hosted runners
 - the supported target is GitHub Actions runners; self-hosted runners should provide `pwsh` on Windows or `sh` plus `curl` on Unix-like runners when installer mode is used
 - when those installer prerequisites are missing, the action now fails with an explicit message telling operators to install the missing tool or switch to `install: never`
 

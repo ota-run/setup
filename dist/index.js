@@ -30937,6 +30937,45 @@ function normalizeOtaVersion(value) {
   return normalized.startsWith("v") ? normalized : `v${normalized}`;
 }
 
+function describeInstallSource(source) {
+  if (source?.kind === "version") {
+    return source.version ? `release ${normalizeOtaVersion(source.version)}` : "latest release";
+  }
+  if (source?.kind === "git_rev" && source.rev) {
+    return `git revision ${source.rev}`;
+  }
+  if (source?.kind === "branch" && source.branch) {
+    return `git branch ${source.branch}`;
+  }
+  return "latest release";
+}
+
+function installerEnvForSource(source, baseEnv = process.env) {
+  const env = { ...baseEnv };
+  delete env.OTA_VERSION;
+  delete env.OTA_GIT_REV;
+  delete env.OTA_GIT_BRANCH;
+
+  if (source?.kind === "version" && source.version) {
+    env.OTA_VERSION = normalizeOtaVersion(source.version);
+    return env;
+  }
+
+  if (source?.kind === "git_rev" && source.rev) {
+    env.OTA_GIT_REV = source.rev;
+    env.CARGO_NET_GIT_FETCH_WITH_CLI = env.CARGO_NET_GIT_FETCH_WITH_CLI || "true";
+    return env;
+  }
+
+  if (source?.kind === "branch" && source.branch) {
+    env.OTA_GIT_BRANCH = source.branch;
+    env.CARGO_NET_GIT_FETCH_WITH_CLI = env.CARGO_NET_GIT_FETCH_WITH_CLI || "true";
+    return env;
+  }
+
+  return env;
+}
+
 function stripWrappingQuotes(value) {
   const text = String(value ?? "");
   if ((text.startsWith("\"") && text.endsWith("\"")) || (text.startsWith("'") && text.endsWith("'"))) {
@@ -31302,21 +31341,8 @@ async function resolveExistingBinary(bin, env = process.env, platform = process.
 }
 
 async function installOta(source, cwd) {
-  const env = { ...process.env };
-  delete env.OTA_VERSION;
-  delete env.OTA_GIT_REV;
-  delete env.OTA_GIT_BRANCH;
-
-  let fromGit = false;
-  if (source?.kind === "version" && source.version) {
-    env.OTA_VERSION = source.version;
-  } else if (source?.kind === "git_rev" && source.rev) {
-    env.OTA_GIT_REV = source.rev;
-    fromGit = true;
-  } else if (source?.kind === "branch" && source.branch) {
-    env.OTA_GIT_BRANCH = source.branch;
-    fromGit = true;
-  }
+  const env = installerEnvForSource(source);
+  const fromGit = source?.kind === "git_rev" || source?.kind === "branch";
 
   for (const tool of installerPrerequisiteNames(process.platform)) {
     const resolved = await resolveExistingBinary(tool, env, process.platform);
@@ -31379,9 +31405,7 @@ async function ensureOtaBinary(inputs, cwd) {
     );
   }
 
-  info(
-    `Installing ota ${requestedVersion || "latest"} via the official installer (${installMode} mode)`
-  );
+  info(`Installing ota ${describeInstallSource(inputs.installSource || requestedSource)} via the official installer (${installMode} mode)`);
 
   const installResult = await installOta(inputs.installSource || requestedSource, cwd);
   if (installResult.stdout.trim()) {

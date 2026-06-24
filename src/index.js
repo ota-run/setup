@@ -26,9 +26,11 @@ import { spawn } from "node:child_process";
 import * as core from "@actions/core";
 
 import {
+  describeInstallSource,
   getEnvValue,
   existingRunnableFile,
   exposeBinaryDirectory,
+  installerEnvForSource,
   isPathLike,
   installerPrerequisiteNames,
   missingInstallerPrerequisiteMessage,
@@ -102,21 +104,8 @@ async function resolveExistingBinary(bin, env = process.env, platform = process.
 }
 
 async function installOta(source, cwd) {
-  const env = { ...process.env };
-  delete env.OTA_VERSION;
-  delete env.OTA_GIT_REV;
-  delete env.OTA_GIT_BRANCH;
-
-  let fromGit = false;
-  if (source?.kind === "version" && source.version) {
-    env.OTA_VERSION = source.version;
-  } else if (source?.kind === "git_rev" && source.rev) {
-    env.OTA_GIT_REV = source.rev;
-    fromGit = true;
-  } else if (source?.kind === "branch" && source.branch) {
-    env.OTA_GIT_BRANCH = source.branch;
-    fromGit = true;
-  }
+  const env = installerEnvForSource(source);
+  const fromGit = source?.kind === "git_rev" || source?.kind === "branch";
 
   for (const tool of installerPrerequisiteNames(process.platform)) {
     const resolved = await resolveExistingBinary(tool, env, process.platform);
@@ -179,9 +168,7 @@ async function ensureOtaBinary(inputs, cwd) {
     );
   }
 
-  core.info(
-    `Installing ota ${requestedVersion || "latest"} via the official installer (${installMode} mode)`
-  );
+  core.info(`Installing ota ${describeInstallSource(inputs.installSource || requestedSource)} via the official installer (${installMode} mode)`);
 
   const installResult = await installOta(inputs.installSource || requestedSource, cwd);
   if (installResult.stdout.trim()) {

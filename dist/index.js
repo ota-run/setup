@@ -30963,13 +30963,13 @@ function installerEnvForSource(source, baseEnv = process.env) {
 
   if (source?.kind === "git_rev" && source.rev) {
     env.OTA_GIT_REV = source.rev;
-    env.CARGO_NET_GIT_FETCH_WITH_CLI = env.CARGO_NET_GIT_FETCH_WITH_CLI || "true";
+    env.CARGO_NET_GIT_FETCH_WITH_CLI = "true";
     return env;
   }
 
   if (source?.kind === "branch" && source.branch) {
     env.OTA_GIT_BRANCH = source.branch;
-    env.CARGO_NET_GIT_FETCH_WITH_CLI = env.CARGO_NET_GIT_FETCH_WITH_CLI || "true";
+    env.CARGO_NET_GIT_FETCH_WITH_CLI = "true";
     return env;
   }
 

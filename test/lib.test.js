@@ -85,7 +85,7 @@ test("installerEnvForSource enables cargo cli fetch for git installs", () => {
     { PATH: "/usr/bin", CARGO_NET_GIT_FETCH_WITH_CLI: "false" }
   );
   assert.equal(branchEnv.OTA_GIT_BRANCH, "1.6.22-implementation");
-  assert.equal(branchEnv.CARGO_NET_GIT_FETCH_WITH_CLI, "false");
+  assert.equal(branchEnv.CARGO_NET_GIT_FETCH_WITH_CLI, "true");
 });
 
 test("parseInstallMode accepts supported values", () => {

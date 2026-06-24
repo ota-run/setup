@@ -158,7 +158,7 @@ test("pathEntries reads PATH regardless of key casing", () => {
   assert.deepEqual(entries, ["/usr/bin", "/bin"]);
 });
 
-test("postInstallBinaryDirectories prefers OTA_BIN_DIR and PATH before static fallbacks", () => {
+test("postInstallBinaryDirectories prefers OTA_BIN_DIR and install directories before PATH", () => {
   const directories = postInstallBinaryDirectories({
     OTA_BIN_DIR: "/tmp/ota-bin",
     HOME: "/tmp/home",
@@ -166,9 +166,9 @@ test("postInstallBinaryDirectories prefers OTA_BIN_DIR and PATH before static fa
   }, "linux");
   assert.deepEqual(directories, [
     "/tmp/ota-bin",
+    "/tmp/home/.local/bin",
     "/tmp/home/.cargo/bin",
     "/usr/bin",
-    "/tmp/home/.local/bin"
   ]);
 });
 

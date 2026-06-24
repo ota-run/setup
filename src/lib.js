@@ -309,12 +309,12 @@ function postInstallBinaryDirectories(env = process.env, platform = process.plat
     push(otaBinDir);
   }
 
-  for (const entry of pathEntries(env, platform)) {
-    push(entry);
-  }
-
   for (const directory of otaInstallDirectories(env, platform)) {
     push(directory);
+  }
+
+  for (const entry of pathEntries(env, platform)) {
+    push(entry);
   }
 
   return directories;

@@ -26,6 +26,7 @@ import { spawn } from "node:child_process";
 import * as core from "@actions/core";
 
 import {
+  assertResolvedVersionMatchesRequested,
   describeInstallSource,
   getEnvValue,
   existingRunnableFile,
@@ -238,6 +239,7 @@ async function main() {
 
   const { binaryPath, installed } = await ensureOtaBinary(inputs, cwd);
   const resolvedVersion = await resolveInstalledVersion(binaryPath, cwd);
+  assertResolvedVersionMatchesRequested(inputs.installSource || requestedSource, resolvedVersion);
 
   core.setOutput("ota-bin", binaryPath);
   core.setOutput("ota-version", resolvedVersion);

@@ -27,6 +27,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  assertResolvedVersionMatchesRequested,
   describeInstallSource,
   existingRunnableFile,
   exposeBinaryDirectory,
@@ -181,6 +182,19 @@ test("parseInstalledVersion extracts ota version output", () => {
   assert.equal(parseInstalledVersion("🦦 v1.4.4\n"), "v1.4.4");
   assert.equal(parseInstalledVersion("ota 1.4.4"), "v1.4.4");
   assert.throws(() => parseInstalledVersion("ready"), /unable to parse ota version/i);
+});
+
+test("assertResolvedVersionMatchesRequested rejects stale fallback binaries", () => {
+  assert.doesNotThrow(() => {
+    assertResolvedVersionMatchesRequested({ kind: "version", version: "1.6.22" }, "v1.6.22");
+  });
+  assert.throws(
+    () => assertResolvedVersionMatchesRequested({ kind: "version", version: "1.6.22" }, "v1.6.21"),
+    /requested ota v1.6.22 but resolved v1.6.21/i
+  );
+  assert.doesNotThrow(() => {
+    assertResolvedVersionMatchesRequested({ kind: "git_rev", rev: "abc" }, "v1.6.21");
+  });
 });
 
 test("installer prerequisites match hosted runner expectations", () => {

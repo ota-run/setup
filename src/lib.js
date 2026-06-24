@@ -351,6 +351,20 @@ function parseInstalledVersion(stdout) {
   return normalized.startsWith("v") ? normalized : `v${normalized}`;
 }
 
+function assertResolvedVersionMatchesRequested(source, resolvedVersion) {
+  if (source?.kind !== "version" || !source.version) {
+    return;
+  }
+  const requestedVersion = normalizeOtaVersion(source.version);
+  const normalizedResolved = normalizeOtaVersion(resolvedVersion);
+  if (requestedVersion === normalizedResolved) {
+    return;
+  }
+  throw new Error(
+    `requested ota ${requestedVersion} but resolved ${normalizedResolved}; the release asset may be missing for this runner or installation fell back to a stale binary`
+  );
+}
+
 function installerPrerequisiteNames(platform = process.platform) {
   return platform === "win32" ? ["pwsh"] : ["sh", "curl"];
 }
@@ -392,6 +406,7 @@ export {
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,
+  assertResolvedVersionMatchesRequested,
   pathEntries,
   resolveBootstrapSourceFromContract
 };

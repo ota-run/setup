@@ -266,6 +266,7 @@ function otaInstallDirectories(env = process.env, platform = process.platform) {
   const pathApi = platform === "win32" ? path.win32 : path.posix;
   const directories = [];
   const otaBinDir = getEnvValue(env, "OTA_BIN_DIR");
+  const cargoInstallRoot = getEnvValue(env, "CARGO_INSTALL_ROOT");
   const localAppData = getEnvValue(env, "LOCALAPPDATA");
   const home = getEnvValue(env, "HOME");
   const userProfile = getEnvValue(env, "USERPROFILE");
@@ -275,6 +276,9 @@ function otaInstallDirectories(env = process.env, platform = process.platform) {
 
   if (otaBinDir) {
     directories.push(otaBinDir);
+  }
+  if (cargoInstallRoot) {
+    directories.push(pathApi.join(cargoInstallRoot, "bin"));
   }
   if (platform === "win32" && localAppData) {
     directories.push(pathApi.join(localAppData, "ota", "bin"));
@@ -365,8 +369,12 @@ function assertResolvedVersionMatchesRequested(source, resolvedVersion) {
   );
 }
 
-function installerPrerequisiteNames(platform = process.platform) {
-  return platform === "win32" ? ["pwsh"] : ["sh", "curl"];
+function installerPrerequisiteNames(platform = process.platform, source = null) {
+  const prerequisites = platform === "win32" ? ["pwsh"] : ["sh", "curl"];
+  if (source?.kind === "git_rev" || source?.kind === "branch") {
+    prerequisites.push("cargo");
+  }
+  return prerequisites;
 }
 
 function missingInstallerPrerequisiteMessage(tool, platform = process.platform) {

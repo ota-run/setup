@@ -27919,6 +27919,8 @@ var __webpack_exports__ = {};
 
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+;// CONCATENATED MODULE: external "node:os"
+const external_node_os_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:os");
 ;// CONCATENATED MODULE: external "node:child_process"
 const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 ;// CONCATENATED MODULE: external "os"
@@ -31139,6 +31141,7 @@ function otaInstallDirectories(env = process.env, platform = process.platform) {
   const pathApi = platform === "win32" ? external_node_path_namespaceObject.win32 : external_node_path_namespaceObject.posix;
   const directories = [];
   const otaBinDir = getEnvValue(env, "OTA_BIN_DIR");
+  const cargoInstallRoot = getEnvValue(env, "CARGO_INSTALL_ROOT");
   const localAppData = getEnvValue(env, "LOCALAPPDATA");
   const home = getEnvValue(env, "HOME");
   const userProfile = getEnvValue(env, "USERPROFILE");
@@ -31148,6 +31151,9 @@ function otaInstallDirectories(env = process.env, platform = process.platform) {
 
   if (otaBinDir) {
     directories.push(otaBinDir);
+  }
+  if (cargoInstallRoot) {
+    directories.push(pathApi.join(cargoInstallRoot, "bin"));
   }
   if (platform === "win32" && localAppData) {
     directories.push(pathApi.join(localAppData, "ota", "bin"));
@@ -31238,8 +31244,12 @@ function assertResolvedVersionMatchesRequested(source, resolvedVersion) {
   );
 }
 
-function installerPrerequisiteNames(platform = process.platform) {
-  return platform === "win32" ? ["pwsh"] : ["sh", "curl"];
+function installerPrerequisiteNames(platform = process.platform, source = null) {
+  const prerequisites = platform === "win32" ? ["pwsh"] : ["sh", "curl"];
+  if (source?.kind === "git_rev" || source?.kind === "branch") {
+    prerequisites.push("cargo");
+  }
+  return prerequisites;
 }
 
 function missingInstallerPrerequisiteMessage(tool, platform = process.platform) {
@@ -31287,6 +31297,7 @@ function exposeBinaryDirectory(binaryPath, addPath, env = process.env, pathModul
 //   and limitations under the License.
 //
 //   If you need additional information or have any questions, please email: os@ota.run
+
 
 
 
@@ -31358,7 +31369,15 @@ async function installOta(source, cwd) {
   const env = installerEnvForSource(source);
   const fromGit = source?.kind === "git_rev" || source?.kind === "branch";
 
-  for (const tool of installerPrerequisiteNames(process.platform)) {
+  // A branch/revision contract must not resolve a same-semver binary left on PATH.
+  // Cargo installs the requested source into this job-local root, which becomes the only
+  // post-install location the action prefers for the source-backed lane.
+  if (fromGit) {
+    const runnerTemp = getEnvValue(env, "RUNNER_TEMP") || external_node_os_namespaceObject.tmpdir();
+    env.CARGO_INSTALL_ROOT = external_node_path_namespaceObject.join(runnerTemp, "ota-run-setup", "source");
+  }
+
+  for (const tool of installerPrerequisiteNames(process.platform, source)) {
     const resolved = await resolveExistingBinary(tool, env, process.platform);
     if (!resolved) {
       throw new Error(missingInstallerPrerequisiteMessage(tool, process.platform));
@@ -31369,23 +31388,25 @@ async function installOta(source, cwd) {
     const command = fromGit
       ? "& ([scriptblock]::Create((irm https://dist.ota.run/install.ps1))) -FromGit"
       : "irm https://dist.ota.run/install.ps1 | iex";
-    return await runCommand(
+    const result = await runCommand(
       "pwsh",
       ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
       cwd,
       env
     );
+    return { result, installEnv: env };
   }
 
   const command = fromGit
     ? "curl -fsSL https://dist.ota.run/install.sh | sh -s -- --from-git"
     : "curl -fsSL https://dist.ota.run/install.sh | sh";
-  return await runCommand(
+  const result = await runCommand(
     "sh",
     ["-c", command],
     cwd,
     env
   );
+  return { result, installEnv: env };
 }
 
 async function resolveInstalledVersion(binaryPath, cwd) {
@@ -31421,7 +31442,7 @@ async function ensureOtaBinary(inputs, cwd) {
 
   info(`Installing ota ${describeInstallSource(inputs.installSource || requestedSource)} via the official installer (${installMode} mode)`);
 
-  const installResult = await installOta(inputs.installSource || requestedSource, cwd);
+  const { result: installResult, installEnv } = await installOta(inputs.installSource || requestedSource, cwd);
   if (installResult.stdout.trim()) {
     info(installResult.stdout.trim());
   }
@@ -31442,7 +31463,7 @@ async function ensureOtaBinary(inputs, cwd) {
   }
 
   const binaryNames = [...new Set([preferred, binaryName].filter((value) => value && !isPathLike(value)))];
-  for (const directory of postInstallBinaryDirectories()) {
+  for (const directory of postInstallBinaryDirectories(installEnv)) {
     for (const name of binaryNames) {
       const candidate = external_node_path_namespaceObject.join(directory, name);
       if (await existingRunnableFile(candidate)) {
@@ -31453,7 +31474,8 @@ async function ensureOtaBinary(inputs, cwd) {
     }
   }
 
-  const discovered = await resolveExistingBinary(preferred) ?? await resolveExistingBinary(binaryName);
+  const discovered = await resolveExistingBinary(preferred, installEnv)
+    ?? await resolveExistingBinary(binaryName, installEnv);
   if (discovered) {
     exposeBinaryDirectory(discovered, addPath);
     info(`Using ota binary at ${discovered}`);
@@ -31489,7 +31511,11 @@ async function main() {
 
   const { binaryPath, installed } = await ensureOtaBinary(inputs, cwd);
   const resolvedVersion = await resolveInstalledVersion(binaryPath, cwd);
-  assertResolvedVersionMatchesRequested(inputs.installSource || requestedSource, resolvedVersion);
+  const resolvedSource = inputs.installSource || {
+    kind: "version",
+    version: normalizeOtaVersion(inputs.otaVersion)
+  };
+  assertResolvedVersionMatchesRequested(resolvedSource, resolvedVersion);
 
   setOutput("ota-bin", binaryPath);
   setOutput("ota-version", resolvedVersion);

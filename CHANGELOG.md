@@ -26,6 +26,11 @@
 
 ## Unreleased
 
+- fixed contract-owned git revision and branch installs to use an isolated Cargo install root and
+  resolve that fresh binary before any PATH fallback; an existing release binary with the same
+  semver can no longer silently satisfy unreleased source truth
+- require Cargo explicitly for contract-owned git revision and branch installs, and fixed the
+  action's post-install source assertion to use the resolved contract source
 - hardened git-revision and branch installs by exporting `CARGO_NET_GIT_FETCH_WITH_CLI=true`
   through the official installer path when `source: contract` or explicit git source truth selects
   an unreleased Ota revision, so GitHub Actions jobs no longer depend on Cargo's flakier libgit

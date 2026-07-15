@@ -116,6 +116,18 @@ test("otaInstallDirectories includes standard unix paths", () => {
   ]);
 });
 
+test("otaInstallDirectories prefers the isolated cargo install root", () => {
+  const directories = otaInstallDirectories({
+    CARGO_INSTALL_ROOT: "/tmp/ota-run-setup/source",
+    HOME: "/tmp/home"
+  }, "linux");
+  assert.deepEqual(directories, [
+    "/tmp/ota-run-setup/source/bin",
+    "/tmp/home/.local/bin",
+    "/tmp/home/.cargo/bin"
+  ]);
+});
+
 test("otaInstallDirectories includes local app data on windows", () => {
   const directories = otaInstallDirectories({
     HOME: "C:\\Users\\bobai",
@@ -201,6 +213,8 @@ test("installer prerequisites match hosted runner expectations", () => {
   assert.deepEqual(installerPrerequisiteNames("linux"), ["sh", "curl"]);
   assert.deepEqual(installerPrerequisiteNames("darwin"), ["sh", "curl"]);
   assert.deepEqual(installerPrerequisiteNames("win32"), ["pwsh"]);
+  assert.deepEqual(installerPrerequisiteNames("linux", { kind: "branch", branch: "1.6.24-implementation" }), ["sh", "curl", "cargo"]);
+  assert.deepEqual(installerPrerequisiteNames("win32", { kind: "git_rev", rev: "abc" }), ["pwsh", "cargo"]);
 });
 
 test("missing installer prerequisite messages point to install never fallback", () => {

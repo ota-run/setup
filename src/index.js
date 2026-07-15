@@ -21,6 +21,7 @@
 //   If you need additional information or have any questions, please email: os@ota.run
 
 import path from "node:path";
+import os from "node:os";
 import { spawn } from "node:child_process";
 
 import * as core from "@actions/core";
@@ -108,7 +109,15 @@ async function installOta(source, cwd) {
   const env = installerEnvForSource(source);
   const fromGit = source?.kind === "git_rev" || source?.kind === "branch";
 
-  for (const tool of installerPrerequisiteNames(process.platform)) {
+  // A branch/revision contract must not resolve a same-semver binary left on PATH.
+  // Cargo installs the requested source into this job-local root, which becomes the only
+  // post-install location the action prefers for the source-backed lane.
+  if (fromGit) {
+    const runnerTemp = getEnvValue(env, "RUNNER_TEMP") || os.tmpdir();
+    env.CARGO_INSTALL_ROOT = path.join(runnerTemp, "ota-run-setup", "source");
+  }
+
+  for (const tool of installerPrerequisiteNames(process.platform, source)) {
     const resolved = await resolveExistingBinary(tool, env, process.platform);
     if (!resolved) {
       throw new Error(missingInstallerPrerequisiteMessage(tool, process.platform));
@@ -119,23 +128,25 @@ async function installOta(source, cwd) {
     const command = fromGit
       ? "& ([scriptblock]::Create((irm https://dist.ota.run/install.ps1))) -FromGit"
       : "irm https://dist.ota.run/install.ps1 | iex";
-    return await runCommand(
+    const result = await runCommand(
       "pwsh",
       ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
       cwd,
       env
     );
+    return { result, installEnv: env };
   }
 
   const command = fromGit
     ? "curl -fsSL https://dist.ota.run/install.sh | sh -s -- --from-git"
     : "curl -fsSL https://dist.ota.run/install.sh | sh";
-  return await runCommand(
+  const result = await runCommand(
     "sh",
     ["-c", command],
     cwd,
     env
   );
+  return { result, installEnv: env };
 }
 
 async function resolveInstalledVersion(binaryPath, cwd) {
@@ -171,7 +182,7 @@ async function ensureOtaBinary(inputs, cwd) {
 
   core.info(`Installing ota ${describeInstallSource(inputs.installSource || requestedSource)} via the official installer (${installMode} mode)`);
 
-  const installResult = await installOta(inputs.installSource || requestedSource, cwd);
+  const { result: installResult, installEnv } = await installOta(inputs.installSource || requestedSource, cwd);
   if (installResult.stdout.trim()) {
     core.info(installResult.stdout.trim());
   }
@@ -192,7 +203,7 @@ async function ensureOtaBinary(inputs, cwd) {
   }
 
   const binaryNames = [...new Set([preferred, binaryName].filter((value) => value && !isPathLike(value)))];
-  for (const directory of postInstallBinaryDirectories()) {
+  for (const directory of postInstallBinaryDirectories(installEnv)) {
     for (const name of binaryNames) {
       const candidate = path.join(directory, name);
       if (await existingRunnableFile(candidate)) {
@@ -203,7 +214,8 @@ async function ensureOtaBinary(inputs, cwd) {
     }
   }
 
-  const discovered = await resolveExistingBinary(preferred) ?? await resolveExistingBinary(binaryName);
+  const discovered = await resolveExistingBinary(preferred, installEnv)
+    ?? await resolveExistingBinary(binaryName, installEnv);
   if (discovered) {
     exposeBinaryDirectory(discovered, core.addPath);
     core.info(`Using ota binary at ${discovered}`);
@@ -239,7 +251,11 @@ async function main() {
 
   const { binaryPath, installed } = await ensureOtaBinary(inputs, cwd);
   const resolvedVersion = await resolveInstalledVersion(binaryPath, cwd);
-  assertResolvedVersionMatchesRequested(inputs.installSource || requestedSource, resolvedVersion);
+  const resolvedSource = inputs.installSource || {
+    kind: "version",
+    version: normalizeOtaVersion(inputs.otaVersion)
+  };
+  assertResolvedVersionMatchesRequested(resolvedSource, resolvedVersion);
 
   core.setOutput("ota-bin", binaryPath);
   core.setOutput("ota-version", resolvedVersion);

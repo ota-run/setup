@@ -168,7 +168,11 @@ steps:
 - when that resolved source is a git revision or branch, the action enables Cargo's CLI git fetch
   path through `CARGO_NET_GIT_FETCH_WITH_CLI=true` so unreleased source installs are more reliable
   on hosted runners
-- the supported target is GitHub Actions runners; self-hosted runners should provide `pwsh` on Windows or `sh` plus `curl` on Unix-like runners when installer mode is used
+- git revision and branch installs use an isolated `CARGO_INSTALL_ROOT` and select that fresh
+  binary before PATH, so an already-installed release with matching semver cannot masquerade as
+  the contract-declared source build
+- the supported target is GitHub Actions runners; self-hosted runners should provide Cargo plus
+  `pwsh` on Windows or Cargo plus `sh` and `curl` on Unix-like runners when a git install is used
 - when those installer prerequisites are missing, the action now fails with an explicit message telling operators to install the missing tool or switch to `install: never`
 
 ## Release model

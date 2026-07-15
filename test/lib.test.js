@@ -39,6 +39,7 @@ import {
   otaBinaryName,
   otaInstallDirectories,
   postInstallBinaryDirectories,
+  prependPathEntry,
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,
@@ -169,6 +170,15 @@ test("otaInstallDirectories falls back to USERPROFILE and HOMEDRIVE/HOMEPATH", (
 test("pathEntries reads PATH regardless of key casing", () => {
   const entries = pathEntries({ Path: "/usr/bin;/bin" }, "win32");
   assert.deepEqual(entries, ["/usr/bin", "/bin"]);
+});
+
+test("prependPathEntry preserves the host PATH key and delimiter", () => {
+  const unix = prependPathEntry({ PATH: "/usr/bin:/bin" }, "/tmp/ota/bin", "linux");
+  assert.equal(unix.PATH, "/tmp/ota/bin:/usr/bin:/bin");
+
+  const windows = prependPathEntry({ Path: "C:\\Windows;C:\\Tools" }, "C:\\temp\\ota\\bin", "win32");
+  assert.equal(windows.Path, "C:\\temp\\ota\\bin;C:\\Windows;C:\\Tools");
+  assert.equal(windows.PATH, undefined);
 });
 
 test("postInstallBinaryDirectories prefers OTA_BIN_DIR and install directories before PATH", () => {

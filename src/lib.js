@@ -298,6 +298,16 @@ function pathEntries(env = process.env, platform = process.platform) {
     .filter(Boolean);
 }
 
+function prependPathEntry(env, entry, platform = process.platform) {
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") || "PATH";
+  const delimiter = platform === "win32" ? path.win32.delimiter : path.posix.delimiter;
+  const current = getEnvValue(env, "PATH") || "";
+  return {
+    ...env,
+    [pathKey]: current ? `${entry}${delimiter}${current}` : entry
+  };
+}
+
 function postInstallBinaryDirectories(env = process.env, platform = process.platform) {
   const directories = [];
   const push = (value) => {
@@ -411,6 +421,7 @@ export {
   otaBinaryName,
   otaInstallDirectories,
   postInstallBinaryDirectories,
+  prependPathEntry,
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,

@@ -31173,6 +31173,16 @@ function pathEntries(env = process.env, platform = process.platform) {
     .filter(Boolean);
 }
 
+function prependPathEntry(env, entry, platform = process.platform) {
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") || "PATH";
+  const delimiter = platform === "win32" ? external_node_path_namespaceObject.win32.delimiter : external_node_path_namespaceObject.posix.delimiter;
+  const current = getEnvValue(env, "PATH") || "";
+  return {
+    ...env,
+    [pathKey]: current ? `${entry}${delimiter}${current}` : entry
+  };
+}
+
 function postInstallBinaryDirectories(env = process.env, platform = process.platform) {
   const directories = [];
   const push = (value) => {
@@ -31375,6 +31385,7 @@ async function installOta(source, cwd) {
   if (fromGit) {
     const runnerTemp = getEnvValue(env, "RUNNER_TEMP") || external_node_os_namespaceObject.tmpdir();
     env.CARGO_INSTALL_ROOT = external_node_path_namespaceObject.join(runnerTemp, "ota-run-setup", "source");
+    Object.assign(env, prependPathEntry(env, external_node_path_namespaceObject.join(env.CARGO_INSTALL_ROOT, "bin")));
   }
 
   for (const tool of installerPrerequisiteNames(process.platform, source)) {

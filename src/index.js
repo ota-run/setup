@@ -39,6 +39,7 @@ import {
   normalizeOtaVersion,
   otaBinaryName,
   postInstallBinaryDirectories,
+  prependPathEntry,
   parseInstallMode,
   parseSourceMode,
   parseInstalledVersion,
@@ -115,6 +116,7 @@ async function installOta(source, cwd) {
   if (fromGit) {
     const runnerTemp = getEnvValue(env, "RUNNER_TEMP") || os.tmpdir();
     env.CARGO_INSTALL_ROOT = path.join(runnerTemp, "ota-run-setup", "source");
+    Object.assign(env, prependPathEntry(env, path.join(env.CARGO_INSTALL_ROOT, "bin")));
   }
 
   for (const tool of installerPrerequisiteNames(process.platform, source)) {

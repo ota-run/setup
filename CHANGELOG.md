@@ -26,6 +26,9 @@
 
 ## Unreleased
 
+- fixed the repository readiness workflow to provision the contract-declared Node 24 runtime
+  before evaluating the npm 11 tool requirement instead of inheriting ambient runner npm
+
 ## 1.0.9 - 2026-07-29
 
 - fixed contract-owned git revision and branch installs to use an isolated Cargo install root and

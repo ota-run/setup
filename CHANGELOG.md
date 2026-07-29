@@ -26,6 +26,8 @@
 
 ## Unreleased
 
+## 1.0.9 - 2026-07-29
+
 - fixed contract-owned git revision and branch installs to use an isolated Cargo install root and
   resolve that fresh binary before any PATH fallback; an existing release binary with the same
   semver can no longer silently satisfy unreleased source truth
@@ -38,6 +40,9 @@
 - fixed setup action install logging so contract-owned git revision and branch installs are
   reported as `git revision ...` / `git branch ...` instead of the misleading generic `latest`
   release wording
+
+## 1.0.8 - 2026-06-19
+
 - fixed the setup repo's own bootstrap truth to use an exact Ota git revision during `1.6.21`
   pressure testing instead of incorrectly claiming unreleased `v1.6.21` release truth in
   `agent.bootstrap.ota.source`
